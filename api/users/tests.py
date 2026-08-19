@@ -293,6 +293,29 @@ class LogoutTests(BaseAPITestCase):
         response = self.client.post(reverse("logout"), {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_logout_rejects_another_users_refresh_token(self, mock_send):
+        other_phone = "+254711000099"
+        User.objects.create_user(
+            phone_number=other_phone, full_name="Other", password=VALID_PASSWORD,
+            is_active=True, is_phone_verified=True,
+        )
+        other_login = self.client.post(
+            reverse("login"), {"phone_number": other_phone, "password": VALID_PASSWORD}
+        )
+        other_refresh = other_login.data["refresh"]
+
+        # Authenticated as self.user, but trying to blacklist the OTHER user's
+        # refresh token.
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
+        response = self.client.post(reverse("logout"), {"refresh": other_refresh})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # The other user's token must still work — it wasn't blacklisted.
+        refresh_response = self.client.post(
+            reverse("token-refresh"), {"refresh": other_refresh}
+        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
+
 
 @patch("users.services.send_otp_sms", side_effect=send_otp_sms_mock)
 class TokenRefreshTests(BaseAPITestCase):

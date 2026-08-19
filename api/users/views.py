@@ -195,12 +195,24 @@ class LogoutView(APIView):
                 {"detail": "refresh is required."}, status=status.HTTP_400_BAD_REQUEST
             )
         try:
-            RefreshToken(refresh).blacklist()
+            token = RefreshToken(refresh)
         except TokenError:
             return Response(
                 {"detail": "Invalid or already-used refresh token."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Being authenticated only proves *some* valid access token was
+        # presented — without this, a caller could blacklist a refresh token
+        # that isn't theirs. Same generic error either way, so this doesn't
+        # confirm to a caller whether a token they don't own is otherwise valid.
+        if str(token["user_id"]) != str(request.user.id):
+            return Response(
+                {"detail": "Invalid or already-used refresh token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        token.blacklist()
 
         return Response({"detail": "Logged out."}, status=status.HTTP_200_OK)
 
