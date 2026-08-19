@@ -3,17 +3,20 @@ from django.contrib.auth.base_user import BaseUserManager
 
 class UserManager(BaseUserManager):
     """
-    Users are created via OTP verification, not a password, so
-    create_user() never takes one. create_superuser() is the one
-    exception — admins still log in with a password in Django admin.
+    Registration collects a password, but a user isn't required to have
+    one — create_user() falls back to set_unusable_password() when none is
+    given, since that's still how e.g. a management command might create one.
     """
 
-    def create_user(self, phone_number, **extra_fields):
+    def create_user(self, phone_number, password=None, **extra_fields):
         if not phone_number:
             raise ValueError("A phone number is required")
         phone_number = self.normalize_phone(phone_number)
         user = self.model(phone_number=phone_number, **extra_fields)
-        user.set_unusable_password()
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save(using=self._db)
         return user
 

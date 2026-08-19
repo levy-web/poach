@@ -1,4 +1,4 @@
-import random
+import secrets
 from datetime import timedelta
 
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -56,13 +56,14 @@ class OTP(models.Model):
     MAX_VERIFY_ATTEMPTS = 5
 
     class Purpose(models.TextChoices):
-        LOGIN = "login", "Login / Signup"
-        # room to grow, e.g. PASSWORD_RESET, PHONE_CHANGE, without a new model
+        REGISTER = "register", "Registration"
+        PASSWORD_RESET = "password_reset", "Password Reset"
+        # room to grow, e.g. PHONE_CHANGE, without a new model
 
     phone_number = models.CharField(max_length=15, db_index=True)
     code = models.CharField(max_length=6)
     purpose = models.CharField(
-        max_length=20, choices=Purpose.choices, default=Purpose.LOGIN
+        max_length=20, choices=Purpose.choices, default=Purpose.REGISTER
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -88,4 +89,4 @@ class OTP(models.Model):
 
     @staticmethod
     def generate_code():
-        return str(random.randint(100000, 999999))
+        return str(secrets.randbelow(1_000_000)).zfill(6)
