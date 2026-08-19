@@ -69,6 +69,9 @@ REST_FRAMEWORK = {
         "otp_register": "5/hour",
         "otp_password_reset": "5/hour",
         "login_attempt": "10/hour",
+        "otp_register_ip": "30/hour",
+        "otp_password_reset_ip": "30/hour",
+        "login_ip": "50/hour",
     },
 }
 

@@ -1,4 +1,4 @@
-from rest_framework.throttling import SimpleRateThrottle
+from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
 
 
 class PhoneNumberThrottle(SimpleRateThrottle):
@@ -28,3 +28,20 @@ class PasswordResetOTPThrottle(PhoneNumberThrottle):
 
 class LoginAttemptThrottle(PhoneNumberThrottle):
     scope = "login_attempt"
+
+
+# Per-phone throttling alone doesn't cap an attacker spraying requests across
+# many *different* numbers from one IP — these add that second dimension.
+# Rates are deliberately generous: many real users can share one public IP
+# behind carrier-grade NAT (common on mobile networks in Kenya), so this is
+# meant to catch obvious scripted bursts, not normal shared-IP traffic.
+class RegisterIPThrottle(AnonRateThrottle):
+    scope = "otp_register_ip"
+
+
+class PasswordResetIPThrottle(AnonRateThrottle):
+    scope = "otp_password_reset_ip"
+
+
+class LoginIPThrottle(AnonRateThrottle):
+    scope = "login_ip"

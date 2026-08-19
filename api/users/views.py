@@ -18,7 +18,14 @@ from .serializers import (
     VerifyOTPSerializer,
 )
 from .services import OTPError, consume_otp, issue_otp, revoke_all_tokens
-from .throttling import LoginAttemptThrottle, PasswordResetOTPThrottle, RegisterOTPThrottle
+from .throttling import (
+    LoginAttemptThrottle,
+    LoginIPThrottle,
+    PasswordResetIPThrottle,
+    PasswordResetOTPThrottle,
+    RegisterIPThrottle,
+    RegisterOTPThrottle,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +39,18 @@ def _tokens_for(user):
     }
 
 
-def _enforce_throttle(throttle_class, request, view):
+def _enforce_throttle(throttle_classes, request, view):
     """
     Manually applied (as opposed to `throttle_classes`) so the budget is only
     spent when we're actually about to send an SMS — not on requests that
     get rejected before that point (e.g. registering an already-taken number).
+    Takes a list so both the per-phone-number and per-IP dimensions can be
+    checked together.
     """
-    throttle = throttle_class()
-    if not throttle.allow_request(request, view):
-        raise Throttled(throttle.wait())
+    for throttle_class in throttle_classes:
+        throttle = throttle_class()
+        if not throttle.allow_request(request, view):
+            raise Throttled(throttle.wait())
 
 
 class RegisterView(APIView):
@@ -67,7 +77,7 @@ class RegisterView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        _enforce_throttle(RegisterOTPThrottle, request, self)
+        _enforce_throttle([RegisterOTPThrottle, RegisterIPThrottle], request, self)
 
         if existing:
             # Started registration before but never confirmed it — update
@@ -112,7 +122,7 @@ class ResendRegistrationOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        _enforce_throttle(RegisterOTPThrottle, request, self)
+        _enforce_throttle([RegisterOTPThrottle, RegisterIPThrottle], request, self)
 
         try:
             issue_otp(phone_number, OTP.Purpose.REGISTER)
@@ -160,7 +170,7 @@ class LoginView(APIView):
     """Phone number + password login for an already-registered, active user."""
 
     permission_classes = [AllowAny]
-    throttle_classes = [LoginAttemptThrottle]
+    throttle_classes = [LoginAttemptThrottle, LoginIPThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -242,7 +252,7 @@ class PasswordResetRequestView(APIView):
 
         user = User.objects.filter(phone_number=phone_number, is_active=True).first()
         if user is not None:
-            _enforce_throttle(PasswordResetOTPThrottle, request, self)
+            _enforce_throttle([PasswordResetOTPThrottle, PasswordResetIPThrottle], request, self)
             try:
                 issue_otp(phone_number, OTP.Purpose.PASSWORD_RESET)
             except Exception:

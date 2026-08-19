@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import OTP, User
-from .throttling import RegisterOTPThrottle
+from .throttling import RegisterIPThrottle, RegisterOTPThrottle
 
 VALID_PASSWORD = "CorrectHorseBattery9"
 PHONE = "+254711000001"
@@ -117,6 +117,24 @@ class RegistrationTests(BaseAPITestCase):
         response = self.client.post(
             reverse("register"),
             {"phone_number": PHONE, "full_name": "Alex", "password": VALID_PASSWORD},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    @patch.object(RegisterIPThrottle, "get_rate", return_value="2/hour")
+    def test_spraying_different_numbers_from_one_ip_is_throttled(self, mock_rate, mock_send):
+        # Per-phone-number throttling alone wouldn't catch this: each of
+        # these is a distinct number, so it'd never trip on its own.
+        for phone in ["+254711000010", "+254711000011"]:
+            response = self.client.post(
+                reverse("register"),
+                {"phone_number": phone, "full_name": "Alex", "password": VALID_PASSWORD},
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.post(
+            reverse("register"),
+            {"phone_number": "+254711000012", "full_name": "Alex", "password": VALID_PASSWORD},
         )
 
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
