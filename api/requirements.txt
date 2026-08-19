@@ -1,0 +1,18 @@
+# Core framework
+Django>=5.0,<6.0
+djangorestframework>=3.15,<4.0
+
+# Auth tokens (JWT) issued after OTP verification
+djangorestframework-simplejwt>=5.3,<6.0
+
+# SMS delivery for OTP codes (sandbox + production)
+africastalking>=1.2,<2.0
+
+# Environment variable management (.env files)
+python-decouple>=3.8,<4.0
+
+# Postgres driver (recommended over SQLite once you have real users)
+psycopg2-binary>=2.9,<3.0
+
+# Optional but recommended once the Kotlin app talks to this API
+django-cors-headers>=4.3,<5.0
