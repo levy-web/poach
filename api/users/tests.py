@@ -367,6 +367,25 @@ class PasswordResetTests(BaseAPITestCase):
         self.assertTrue(self.user.check_password("BrandNewPass42"))
         self.assertFalse(self.user.check_password(VALID_PASSWORD))
 
+    def test_reset_confirm_revokes_previously_issued_refresh_tokens(self, mock_send):
+        login = self.client.post(
+            reverse("login"), {"phone_number": PHONE, "password": VALID_PASSWORD}
+        )
+        old_refresh = login.data["refresh"]
+
+        self.client.post(reverse("password-reset"), {"phone_number": PHONE})
+        otp = OTP.objects.filter(
+            phone_number=PHONE, purpose=OTP.Purpose.PASSWORD_RESET
+        ).latest("created_at")
+        self.client.post(
+            reverse("password-reset-confirm"),
+            {"phone_number": PHONE, "code": otp.code, "new_password": "BrandNewPass42"},
+        )
+
+        response = self.client.post(reverse("token-refresh"), {"refresh": old_refresh})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_reset_confirm_rejects_weak_password(self, mock_send):
         self.client.post(reverse("password-reset"), {"phone_number": PHONE})
         otp = OTP.objects.filter(

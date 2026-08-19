@@ -2,6 +2,7 @@ import logging
 
 import africastalking
 from django.conf import settings
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from .models import OTP
 
@@ -56,3 +57,14 @@ def consume_otp(phone_number, purpose, code):
     otp.is_used = True
     otp.save(update_fields=["is_used"])
     return otp
+
+
+def revoke_all_tokens(user):
+    """
+    Blacklists every outstanding refresh token for `user` — used after a
+    password reset so a session started with the old password can't keep
+    refreshing. Already-issued access tokens stay valid until they naturally
+    expire (ACCESS_TOKEN_LIFETIME); JWTs aren't otherwise revocable.
+    """
+    for outstanding in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=outstanding)

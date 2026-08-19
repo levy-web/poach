@@ -17,7 +17,7 @@ from .serializers import (
     UserSerializer,
     VerifyOTPSerializer,
 )
-from .services import OTPError, consume_otp, issue_otp
+from .services import OTPError, consume_otp, issue_otp, revoke_all_tokens
 from .throttling import LoginAttemptThrottle, PasswordResetOTPThrottle, RegisterOTPThrottle
 
 logger = logging.getLogger(__name__)
@@ -272,5 +272,6 @@ class PasswordResetConfirmView(APIView):
 
         user.set_password(new_password)
         user.save(update_fields=["password"])
+        revoke_all_tokens(user)
 
         return Response(_tokens_for(user), status=status.HTTP_200_OK)
