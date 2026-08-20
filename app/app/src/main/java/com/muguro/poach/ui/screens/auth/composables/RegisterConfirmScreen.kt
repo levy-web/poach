@@ -1,6 +1,7 @@
 package com.muguro.poach.ui.screens.auth.composables
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -86,6 +87,8 @@ fun RegisterConfirmScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(28.dp))
+
             Button(
                 onClick = {
                     viewModel.confirmRegister(phone) {
@@ -104,7 +107,6 @@ fun RegisterConfirmScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .padding(top = 28.dp),
             ) {
                 if (viewModel.confirmLoading.value) {
                     CircularProgressIndicator(
