@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.hilt.android)
+    implementation(libs.androidx.navigation.runtime.ktx)
     kapt(libs.hilt.android.compiler)
 
     implementation(libs.okhttp)
