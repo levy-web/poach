@@ -22,7 +22,7 @@ def _get_sms_service():
 def send_otp_sms(phone_number, code):
     if settings.DEBUG:
         logger.info("OTP for %s: %s", phone_number, code)
-    message = f"Your Poach verification code is {code}. It expires in 5 minutes."
+    message = f"Your Kijiji Eats verification code is {code}. It expires in 5 minutes."
     return _get_sms_service().send(message, [phone_number])
 
 
