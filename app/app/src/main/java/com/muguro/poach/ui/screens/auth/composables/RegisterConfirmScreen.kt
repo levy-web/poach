@@ -96,7 +96,11 @@ fun RegisterConfirmScreen(
                 },
                 enabled = !viewModel.confirmLoading.value && viewModel.confirmationCode.value.length == 6,
                 shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)

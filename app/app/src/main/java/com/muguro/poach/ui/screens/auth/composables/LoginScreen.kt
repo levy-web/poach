@@ -1,9 +1,11 @@
 package com.muguro.poach.ui.screens.auth.composables
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -135,6 +138,8 @@ fun LoginScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(28.dp))
+
                 Button(
                     onClick = {
                         viewModel.login {
@@ -145,11 +150,14 @@ fun LoginScreen(
                     },
                     enabled = !viewModel.isLoading.value && canSubmit,
                     shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .padding(top = 28.dp),
                 ) {
                     if (viewModel.isLoading.value) {
                         CircularProgressIndicator(

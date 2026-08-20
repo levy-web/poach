@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
@@ -163,6 +164,8 @@ fun RegisterScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(28.dp))
+
                 Button(
                     onClick = {
                         viewModel.register {
@@ -175,11 +178,14 @@ fun RegisterScreen(
                     },
                     enabled = !viewModel.registerLoading.value && canSubmit,
                     shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .padding(top = 28.dp),
                 ) {
                     if (viewModel.registerLoading.value) {
                         CircularProgressIndicator(
