@@ -3,10 +3,9 @@ from datetime import timedelta
 
 from django.db.models import Count, Q
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.generics import ListAPIView
+from rest_framework import mixins, status, viewsets
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.exceptions import Throttled
+from rest_framework.exceptions import PermissionDenied, Throttled, ValidationError
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import OTP, User
 from .serializers import (
     AdminUserListSerializer,
+    AdminUserWriteSerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PhoneNumberSerializer,
@@ -258,16 +258,38 @@ class AdminUserPagination(PageNumberPagination):
     max_page_size = 100
 
 
-class AdminUserListView(ListAPIView):
+class AdminUserViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     """
-    Paginated, searchable account list for the admin console. Staff-only —
-    this exposes every user's phone number, so it must never be readable by
-    an ordinary authenticated customer.
+    Account management for the admin console. Staff-only — this exposes
+    every user's phone number, so it must never be readable by an ordinary
+    authenticated customer.
+
+    Deliberately **not** a ModelViewSet: there is no destroy action, so
+    DELETE returns 405. Accounts are retired by setting is_active=False
+    instead. Deleting would either be blocked by the PROTECT on
+    Order.customer or, worse, silently cascade away the user's
+    VendorProfile/RunnerProfile and their delivery locations.
+
+    Guards enforced below, in addition to the staff requirement:
+      * an admin can't lock themselves out of their own account
+      * only superusers may grant or revoke staff access
+      * deactivating or changing a password revokes that user's sessions
     """
 
     serializer_class = AdminUserListSerializer
     permission_classes = [IsAdminUser]
     pagination_class = AdminUserPagination
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return AdminUserWriteSerializer
+        return AdminUserListSerializer
 
     def get_queryset(self):
         # Annotated once per page instead of per row; ordered by newest
@@ -283,6 +305,85 @@ class AdminUserListView(ListAPIView):
                 Q(full_name__icontains=search) | Q(phone_number__icontains=search)
             )
         return qs
+
+    def _guard_privilege_change(self, validated, instance=None):
+        """
+        Staff access is the keys to this console. Letting any staff member
+        grant it turns one compromised admin account into permanent, silent
+        privilege escalation, so only superusers may change the flag.
+        """
+        if "is_staff" not in validated:
+            return
+        current = instance.is_staff if instance is not None else False
+        if validated["is_staff"] == current:
+            return  # no-op, e.g. re-saving a form with the flag unchanged
+        if not self.request.user.is_superuser:
+            raise PermissionDenied("Only a superuser can grant or revoke staff access.")
+
+    def _guard_self_lockout(self, instance, validated):
+        """An admin editing themselves must not be able to lock themselves out."""
+        if instance.pk != self.request.user.pk:
+            return
+        if validated.get("is_active") is False:
+            raise ValidationError({"is_active": "You can't deactivate your own account."})
+        if validated.get("is_staff") is False:
+            raise ValidationError({"is_staff": "You can't remove your own staff access."})
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        self._guard_privilege_change(data)
+
+        # Routed through the manager so the phone number is normalized and a
+        # missing password becomes an unusable one rather than an empty hash.
+        user = User.objects.create_user(
+            phone_number=data["phone_number"],
+            password=data.get("password") or None,
+            full_name=data.get("full_name", ""),
+            is_active=data.get("is_active", True),
+            is_staff=data.get("is_staff", False),
+            is_phone_verified=data.get("is_phone_verified", False),
+        )
+        return Response(
+            AdminUserListSerializer(self._with_order_count(user)).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=kwargs.pop("partial", False)
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        self._guard_privilege_change(data, instance)
+        self._guard_self_lockout(instance, data)
+
+        for field in ("phone_number", "full_name", "is_active", "is_staff", "is_phone_verified"):
+            if field in data:
+                setattr(instance, field, data[field])
+
+        password = data.get("password")
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+
+        # A password change or a deactivation has to invalidate existing
+        # sessions, otherwise the old refresh token keeps working and the
+        # change is cosmetic.
+        if password or data.get("is_active") is False:
+            revoke_all_tokens(instance)
+
+        return Response(AdminUserListSerializer(self._with_order_count(instance)).data)
+
+    @staticmethod
+    def _with_order_count(user):
+        """The read serializer expects the annotation the list queryset adds."""
+        user.order_count = user.orders.count()
+        return user
 
 
 class AdminUserStatsView(APIView):

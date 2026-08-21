@@ -10,6 +10,8 @@ export interface AuthenticatedUser {
   full_name: string;
   is_phone_verified: boolean;
   is_staff: boolean;
+  /** Only superusers may grant or revoke staff access. */
+  is_superuser: boolean;
 }
 
 /**

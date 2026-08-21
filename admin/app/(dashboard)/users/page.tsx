@@ -1,7 +1,9 @@
 import PageHeader from "@/components/PageHeader";
 import TablePagination from "@/components/TablePagination";
 import TableSearch from "@/components/TableSearch";
-import { getUserStats, getUsers, LIST_PAGE_SIZE } from "@/lib/dal";
+import { getCurrentUser, getUserStats, getUsers, LIST_PAGE_SIZE } from "@/lib/dal";
+import NewUserButton from "./NewUserButton";
+import UsersTableActions from "./UsersTableActions";
 
 function initialsOf(user: { full_name: string; phone_number: string }) {
   const source = user.full_name.trim();
@@ -62,10 +64,10 @@ export default async function UsersPage({
   const requestedPage = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
-  const [{ items: users, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
-    getUsers({ page, search }),
-    getUserStats(),
-  ]);
+  const [{ items: users, total, totalPages, failed, outOfRange }, stats, currentUser] =
+    await Promise.all([getUsers({ page, search }), getUserStats(), getCurrentUser()]);
+
+  const canManageStaff = currentUser?.is_superuser ?? false;
 
   const from = total === 0 ? 0 : (page - 1) * LIST_PAGE_SIZE + 1;
   const to = Math.min(page * LIST_PAGE_SIZE, total);
@@ -76,12 +78,7 @@ export default async function UsersPage({
       <PageHeader
         title="User Management"
         subtitle="Manage customer accounts, view activity, and update status."
-        action={
-          <button className="flex items-center gap-2 rounded-md bg-zest-orange px-6 py-3 font-label-md text-label-md text-white shadow-sm transition-all duration-200 active:scale-95 hover:bg-zest-orange-container">
-            <span className="material-symbols-outlined">add</span>
-            New User
-          </button>
-        }
+        action={<NewUserButton canManageStaff={canManageStaff} />}
       />
 
       <div className="grid grid-cols-1 gap-gutter md:grid-cols-3">
@@ -217,9 +214,11 @@ export default async function UsersPage({
                       </span>
                     </td>
                     <td className="p-4 pr-stack-md text-right">
-                      <button className="text-secondary opacity-0 transition-opacity group-hover:opacity-100 hover:text-zest-orange">
-                        <span className="material-symbols-outlined">more_vert</span>
-                      </button>
+                      <UsersTableActions
+                        user={user}
+                        canManageStaff={canManageStaff}
+                        currentUserId={currentUser?.id ?? null}
+                      />
                     </td>
                   </tr>
                 ))
