@@ -1,25 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
+import { login, type LoginState } from "@/lib/auth-actions";
+
+const initialState: LoginState = {};
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-
-    // TODO: wire up to the real admin auth endpoint once it exists.
-    setTimeout(() => {
-      setSubmitting(false);
-      router.push("/");
-    }, 400);
-  }
+  const [state, formAction, pending] = useActionState(login, initialState);
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-container-low">
@@ -34,23 +21,28 @@ export default function LoginPage() {
           <div className="mb-8 text-center">
             <h1 className="mb-2 font-headline-lg text-headline-lg text-on-surface">Welcome Back</h1>
             <p className="font-body-md text-body-md text-on-surface-variant">
-              Please enter your credentials to access the admin portal.
+              Please enter your admin credentials to access the portal.
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" action={formAction}>
+            {state.error && (
+              <div className="rounded-md border border-error/30 bg-error-container/40 px-4 py-3 font-body-sm text-body-sm text-on-error-container">
+                {state.error}
+              </div>
+            )}
+
             <div>
-              <label htmlFor="email" className="mb-2 block font-label-md text-label-md text-on-surface">
-                Email Address
+              <label htmlFor="phone_number" className="mb-2 block font-label-md text-label-md text-on-surface">
+                Phone Number
               </label>
               <input
-                id="email"
-                type="email"
+                id="phone_number"
+                name="phone_number"
+                type="tel"
                 required
                 autoComplete="username"
-                placeholder="admin@zest.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                placeholder="0712345678"
                 className="w-full rounded-md border border-outline-variant bg-surface-cream px-4 py-3 font-body-md text-on-surface transition-all placeholder:text-on-surface-variant/50 focus:border-zest-orange focus:ring-2 focus:ring-zest-orange focus:outline-none"
               />
             </div>
@@ -69,12 +61,11 @@ export default function LoginPage() {
               </div>
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-md border border-outline-variant bg-surface-cream px-4 py-3 font-body-md text-on-surface transition-all placeholder:text-on-surface-variant/50 focus:border-zest-orange focus:ring-2 focus:ring-zest-orange focus:outline-none"
               />
             </div>
@@ -83,8 +74,6 @@ export default function LoginPage() {
               <input
                 id="remember"
                 type="checkbox"
-                checked={rememberMe}
-                onChange={(event) => setRememberMe(event.target.checked)}
                 className="h-5 w-5 cursor-pointer rounded border-outline-variant bg-surface-cream text-zest-orange focus:ring-zest-orange"
               />
               <label
@@ -97,11 +86,11 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={pending}
               className="flex w-full items-center justify-center gap-2 rounded-md bg-zest-orange px-4 py-3 font-label-md text-label-md text-on-primary shadow-sm transition-colors hover:bg-zest-orange-container focus:ring-2 focus:ring-zest-orange focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? "Signing In..." : "Sign In"}
-              {!submitting && <span className="material-symbols-outlined text-[18px]">login</span>}
+              {pending ? "Signing In..." : "Sign In"}
+              {!pending && <span className="material-symbols-outlined text-[18px]">login</span>}
             </button>
           </form>
         </div>

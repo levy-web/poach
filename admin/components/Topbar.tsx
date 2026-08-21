@@ -1,11 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import type { AuthenticatedUser } from "@/lib/dal";
 
 const ADMIN_AVATAR_URL =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDzYNFMWvY8WiH171rhWSLLJBswUCoVZFWHF1xzMyputhdQMxDLpZC-RFUZHg5W-W-QicjHo3dhjipHa8B9iRkr-nwHslG41mWUM_-Zbu1mK4pMn3kHh5wlRwUV-ESAhOr-ncFUYTYJcRfL_qNbnWBJVx6m9EjFMjynb9O8X5Z_xft1-CxKkWb_JJ8QIiUkIsMuwf8lYfMpq0OXTl5x9NBuOdid-V8TU7SDnk-UxQxpEbb_J0CXP6zS";
 
-export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+export default function Topbar({
+  onMenuClick,
+  user,
+}: {
+  onMenuClick: () => void;
+  user: AuthenticatedUser;
+}) {
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-surface-container-high bg-surface px-margin-page dark:border-outline-variant dark:bg-surface-dim">
       <div className="flex flex-1 items-center gap-4">
@@ -50,10 +57,16 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <span className="material-symbols-outlined">apps</span>
         </button>
-        <div className="ml-4 h-8 w-8 cursor-pointer overflow-hidden rounded-full border border-outline-variant shadow-sm transition-colors hover:border-zest-orange">
+        <span className="hidden font-label-md text-label-md text-on-surface-variant sm:inline">
+          {user.full_name || user.phone_number}
+        </span>
+        <div
+          className="ml-4 h-8 w-8 cursor-pointer overflow-hidden rounded-full border border-outline-variant shadow-sm transition-colors hover:border-zest-orange"
+          title={user.full_name || user.phone_number}
+        >
           <Image
             src={ADMIN_AVATAR_URL}
-            alt="Administrator profile"
+            alt={user.full_name || "Administrator profile"}
             width={32}
             height={32}
             className="h-full w-full object-cover"
