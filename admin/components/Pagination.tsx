@@ -2,14 +2,17 @@ function PageButton({
   children,
   active = false,
   disabled = false,
+  onClick,
 }: {
   children: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       disabled={disabled}
+      onClick={onClick}
       className={`flex h-8 w-8 items-center justify-center rounded-md font-label-md text-label-md transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
           ? "bg-zest-orange text-on-primary"
@@ -28,6 +31,7 @@ export default function Pagination({
   noun,
   currentPage,
   totalPages,
+  onPageChange,
 }: {
   from: number;
   to: number;
@@ -35,6 +39,7 @@ export default function Pagination({
   noun: string;
   currentPage: number;
   totalPages: number;
+  onPageChange?: (page: number) => void;
 }) {
   const trailingPages = totalPages > currentPage + 2 ? [totalPages] : [];
 
@@ -44,11 +49,11 @@ export default function Pagination({
         Showing {from.toLocaleString()} to {to.toLocaleString()} of {total.toLocaleString()} {noun}
       </span>
       <div className="flex items-center gap-2">
-        <PageButton disabled={currentPage === 1}>
+        <PageButton disabled={currentPage === 1} onClick={() => onPageChange?.(currentPage - 1)}>
           <span className="material-symbols-outlined text-[18px]">chevron_left</span>
         </PageButton>
         {Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + 1).map((page) => (
-          <PageButton key={page} active={page === currentPage}>
+          <PageButton key={page} active={page === currentPage} onClick={() => onPageChange?.(page)}>
             {page}
           </PageButton>
         ))}
@@ -56,11 +61,13 @@ export default function Pagination({
           <>
             <span className="px-1 text-on-surface-variant">...</span>
             {trailingPages.map((page) => (
-              <PageButton key={page}>{page}</PageButton>
+              <PageButton key={page} onClick={() => onPageChange?.(page)}>
+                {page}
+              </PageButton>
             ))}
           </>
         )}
-        <PageButton disabled={currentPage === totalPages}>
+        <PageButton disabled={currentPage === totalPages} onClick={() => onPageChange?.(currentPage + 1)}>
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
         </PageButton>
       </div>

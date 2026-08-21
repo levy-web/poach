@@ -1,49 +1,22 @@
+"use client";
+
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import Pagination from "@/components/Pagination";
-
-const vendors = [
-  {
-    name: "Burger Haven",
-    logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuD346bNLUElm2En_e6kVZaOVw350B9nquitEWu4aIu0Y7F7kXOwZOGi91GCrtBhqTvwYJbdyVQ_SqVyl1tbd21QwylyjkJpgv6XxUtwRXdXUDKAcSvq-ioVmWacOiRkpviVQZzYHuNUR1uU6vngGPVss5ulq2DHpVQvk07z8Y3aT4PIGPnZJJb7HgI8AJuOhcsrNgM6ojEBqTaYb1_Wrxmk0kuxjMbMBQ6tl3Vd1Ksi2JF0P6F5wmUA",
-    category: "Fast Food",
-    status: "Active",
-    statusClass: "border border-[#a5d6a7] bg-[#e8f5e9] text-[#2e7d32]",
-    rating: "4.8",
-    items: "42 items",
-  },
-  {
-    name: "Green Bowl Co.",
-    logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuC8zL4oFoAkSRv1gP7PO_1aVHt5nNR7KiSjyGsNZwrYE2wGFFLnGqSM1id88w5UhkN7H8ICmdzOkE6MWEovxrxBvRq6dwFWnA4AjWP6nXSUX4TR0IxXZfWESAlascim_nHlmKksw3bb05QFnwy64E2JTyFLfesJmr4r7L23AIqOmQh_XXiCqW_e87K-FyBb0pzJl57w3Yb06a8L9cWXOz20mvVenwmX_qrPvHy0zWiTrFdFr27GAszL",
-    category: "Healthy",
-    status: "Active",
-    statusClass: "border border-[#a5d6a7] bg-[#e8f5e9] text-[#2e7d32]",
-    rating: "4.9",
-    items: "28 items",
-  },
-  {
-    name: "Tokyo Noodle Bar",
-    logo: null,
-    initials: "TN",
-    category: "Asian",
-    status: "Paused",
-    statusClass: "border border-outline-variant bg-surface-container-highest text-on-surface-variant",
-    rating: "4.5",
-    items: "35 items",
-  },
-  {
-    name: "Spicy Fiesta",
-    logo: null,
-    initials: "SF",
-    category: "Mexican",
-    status: "Onboarding",
-    statusClass: "border border-blue-200 bg-blue-50 text-blue-700",
-    rating: null,
-    items: "--",
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import {
+  selectFilteredVendors,
+  setCategoryFilter,
+  setCurrentPage,
+  setSearchQuery,
+} from "@/lib/features/vendors/vendorsSlice";
 
 export default function VendorsPage() {
+  const dispatch = useAppDispatch();
+  const vendors = useAppSelector(selectFilteredVendors);
+  const { searchQuery, categoryFilter, currentPage, totalActiveVendors, avgRating, pendingMenuUpdates } =
+    useAppSelector((state) => state.vendors);
+
   return (
     <div className="mx-auto max-w-7xl space-y-stack-xl px-margin-page py-stack-xl">
       <PageHeader
@@ -65,7 +38,9 @@ export default function VendorsPage() {
           <p className="mb-2 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase">
             Total Active Vendors
           </p>
-          <h3 className="font-display-lg text-display-lg text-on-surface">142</h3>
+          <h3 className="font-display-lg text-display-lg text-on-surface">
+            {totalActiveVendors.toLocaleString()}
+          </h3>
           <div className="mt-4 flex w-fit items-center gap-2 rounded-full bg-green-50 px-2 py-1 font-label-sm text-label-sm text-green-700">
             <span className="material-symbols-outlined text-[16px]">trending_up</span>
             +12 this month
@@ -80,7 +55,8 @@ export default function VendorsPage() {
             Avg Vendor Rating
           </p>
           <h3 className="font-display-lg text-display-lg text-on-surface">
-            4.8<span className="text-title-lg text-on-surface-variant">/5.0</span>
+            {avgRating}
+            <span className="text-title-lg text-on-surface-variant">/5.0</span>
           </h3>
           <div className="mt-4 flex w-fit items-center gap-2 rounded-full bg-surface-container px-2 py-1 font-label-sm text-label-sm text-on-surface-variant">
             Based on 12k reviews
@@ -94,7 +70,7 @@ export default function VendorsPage() {
           <p className="mb-2 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase">
             Pending Menu Updates
           </p>
-          <h3 className="font-display-lg text-display-lg text-zest-orange">24</h3>
+          <h3 className="font-display-lg text-display-lg text-zest-orange">{pendingMenuUpdates}</h3>
           <div className="mt-4 flex w-fit cursor-pointer items-center gap-2 rounded-full bg-primary-fixed-dim/30 px-2 py-1 font-label-sm text-label-sm text-zest-orange transition-colors hover:bg-primary-fixed-dim/50">
             Review Now <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
           </div>
@@ -112,15 +88,22 @@ export default function VendorsPage() {
               <input
                 type="text"
                 placeholder="Search vendors..."
+                value={searchQuery}
+                onChange={(event) => dispatch(setSearchQuery(event.target.value))}
                 className="w-full rounded-md border border-outline-variant bg-surface px-4 py-2 pl-10 font-body-sm text-body-sm shadow-sm transition-all focus:border-zest-orange focus:ring-2 focus:ring-zest-orange"
               />
             </div>
             <div className="relative">
-              <select className="cursor-pointer appearance-none rounded-md border border-outline-variant bg-surface px-4 py-2 pr-10 font-body-sm text-body-sm text-on-surface shadow-sm transition-all focus:border-zest-orange focus:ring-2 focus:ring-zest-orange">
-                <option>All Categories</option>
-                <option>Fast Food</option>
-                <option>Healthy</option>
-                <option>Asian</option>
+              <select
+                value={categoryFilter}
+                onChange={(event) => dispatch(setCategoryFilter(event.target.value))}
+                className="cursor-pointer appearance-none rounded-md border border-outline-variant bg-surface px-4 py-2 pr-10 font-body-sm text-body-sm text-on-surface shadow-sm transition-all focus:border-zest-orange focus:ring-2 focus:ring-zest-orange"
+              >
+                <option value="All">All Categories</option>
+                <option value="Fast Food">Fast Food</option>
+                <option value="Healthy">Healthy</option>
+                <option value="Asian">Asian</option>
+                <option value="Mexican">Mexican</option>
               </select>
               <span className="material-symbols-outlined pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant">
                 expand_more
@@ -211,7 +194,15 @@ export default function VendorsPage() {
           </table>
         </div>
 
-        <Pagination from={1} to={4} total={142} noun="vendors" currentPage={1} totalPages={3} />
+        <Pagination
+          from={vendors.length ? 1 : 0}
+          to={vendors.length}
+          total={totalActiveVendors}
+          noun="vendors"
+          currentPage={currentPage}
+          totalPages={3}
+          onPageChange={(page) => dispatch(setCurrentPage(page))}
+        />
       </div>
     </div>
   );

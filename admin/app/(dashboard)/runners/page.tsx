@@ -1,58 +1,16 @@
+"use client";
+
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import Pagination from "@/components/Pagination";
-
-const runners = [
-  {
-    name: "Alex Rivera",
-    id: "RUN-8492",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAuIsDE4-LzxfyNd0H1UFSUYWTLSUwoEG3QZbj9TirBhppvmy4bn37H0uEdVE-xgMVnK1vf0fLm8D8inow1C3anugIfbBEOPYMxLLL3oszpC3Vi1YEBt-u0Zaxdo1dPaIhCIXCZWmKTluN2U3Rann-Gk0b3iRhTWkpxnw1iAC4Zfx-eRU-a7Q29ZhZckgD_RWZL71xQG3uJdUUbZtTtsO9ek4iZErCjNaHHSuSFIvgBEZ9I0_HKQrJx",
-    status: "Online",
-    statusClass: "bg-primary-fixed text-on-primary-fixed-variant",
-    dotClass: "bg-zest-orange",
-    activeOrders: 2,
-    rating: 4.9,
-    vehicle: "Scooter",
-  },
-  {
-    name: "Sarah Chen",
-    id: "RUN-9103",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuA0aFaaI4d5AyzV6oztYCAQCekc93XbpIbq9v6wh48sgog4AEoAKWYnise4gg1R06fzi-ZRoQBoe7C8bLRD8O4dmrZkkALkthehDjI_phTHITN6lM8_1LXoQe3Le5zL6Mx8M2qa4pUYbaUODpU7ZzVAH_4JQi0RX9Im08024gclQqfw9-60V4uhHsIv9-zn5r5v7ZkVxZ6kSDUpot40v7slxBORAiL3eD4UYb3xP1jX5Xfh4zXog1sO",
-    status: "Offline",
-    statusClass: "bg-surface-variant text-on-surface-variant",
-    dotClass: "bg-secondary",
-    activeOrders: 0,
-    rating: 5.0,
-    vehicle: "Sedan",
-  },
-  {
-    name: "Marcus Johnson",
-    id: "RUN-7721",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCrPwewJpflSpShi-SGmS2tzUsMqScPy7M0iGSEGhLLkbHcckO5_nxZn-0vH424dka8R_qOKHfEKemhfx1CjyHyEoTwPB6NORrkGhk3czn9e20Pfmalz0uhmCNZ4nXdqGiLmApPvxDOtU86FEPAVgeVuA937_ZC6TyNcUZP9PXxyDJJGKAeXxJUe2kxU8aT4tVnpiJVq2mJuhBpT7Glc5pdvIdKYs5iHONrbGEo--zgqRUdxSKRglgo",
-    status: "On Break",
-    statusClass: "bg-secondary-container text-secondary",
-    dotClass: "bg-secondary",
-    activeOrders: 1,
-    rating: 4.7,
-    vehicle: "Bicycle",
-  },
-  {
-    name: "Linda Torres",
-    id: "RUN-3390",
-    avatar: null,
-    status: "Online",
-    statusClass: "bg-primary-fixed text-on-primary-fixed-variant",
-    dotClass: "bg-zest-orange",
-    activeOrders: 3,
-    rating: 4.8,
-    vehicle: "Scooter",
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { selectFilteredRunners, setCurrentPage, setSearchQuery } from "@/lib/features/runners/runnersSlice";
 
 export default function RunnersPage() {
+  const dispatch = useAppDispatch();
+  const runners = useAppSelector(selectFilteredRunners);
+  const { searchQuery, currentPage, totalFleet, onlineNow, avgRating } = useAppSelector((state) => state.runners);
+
   return (
     <div className="p-margin-page">
       <PageHeader
@@ -75,7 +33,9 @@ export default function RunnersPage() {
             </div>
           </div>
           <div>
-            <div className="mb-2 font-display-lg text-display-lg text-on-surface">1,248</div>
+            <div className="mb-2 font-display-lg text-display-lg text-on-surface">
+              {totalFleet.toLocaleString()}
+            </div>
             <div className="flex items-center gap-2 font-label-sm text-label-sm text-primary-container">
               <span className="material-symbols-outlined text-[16px]">trending_up</span>
               <span>+12 this week</span>
@@ -95,7 +55,9 @@ export default function RunnersPage() {
             </div>
           </div>
           <div>
-            <div className="mb-2 font-display-lg text-display-lg text-on-surface">412</div>
+            <div className="mb-2 font-display-lg text-display-lg text-on-surface">
+              {onlineNow.toLocaleString()}
+            </div>
             <div className="font-body-sm text-body-sm text-on-surface-variant">
               Active delivery partners
             </div>
@@ -111,7 +73,7 @@ export default function RunnersPage() {
           </div>
           <div>
             <div className="mb-2 font-display-lg text-display-lg text-on-surface">
-              4.8 <span className="font-headline-md text-headline-md text-on-surface-variant">/ 5.0</span>
+              {avgRating} <span className="font-headline-md text-headline-md text-on-surface-variant">/ 5.0</span>
             </div>
             <div className="font-body-sm text-body-sm text-on-surface-variant">
               Based on customer feedback
@@ -131,6 +93,8 @@ export default function RunnersPage() {
               <input
                 type="text"
                 placeholder="Search runners..."
+                value={searchQuery}
+                onChange={(event) => dispatch(setSearchQuery(event.target.value))}
                 className="w-full rounded-md border border-outline-variant bg-surface py-2 pr-4 pl-10 font-body-sm text-body-sm outline-none focus:border-zest-orange focus:ring-0"
               />
             </div>
@@ -225,7 +189,15 @@ export default function RunnersPage() {
           </table>
         </div>
 
-        <Pagination from={1} to={4} total={1248} noun="runners" currentPage={1} totalPages={125} />
+        <Pagination
+          from={runners.length ? 1 : 0}
+          to={runners.length}
+          total={totalFleet}
+          noun="runners"
+          currentPage={currentPage}
+          totalPages={125}
+          onPageChange={(page) => dispatch(setCurrentPage(page))}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Be_Vietnam_Pro } from "next/font/google";
+import StoreProvider from "./StoreProvider";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -31,7 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
       </head>
-      <body className="font-body-md text-on-surface antialiased">{children}</body>
+      <body className="font-body-md text-on-surface antialiased">
+        <StoreProvider>{children}</StoreProvider>
+      </body>
     </html>
   );
 }

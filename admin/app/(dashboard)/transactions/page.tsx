@@ -1,65 +1,37 @@
+"use client";
+
 import PageHeader from "@/components/PageHeader";
 import Pagination from "@/components/Pagination";
-
-const transactions = [
-  {
-    id: "#TXN-8842",
-    date: "Oct 24, 2023, 14:30",
-    type: "Order",
-    typeClass: "border border-blue-100 bg-blue-50 text-blue-700",
-    typeIcon: "shopping_bag",
-    entity: "John Doe",
-    entityInitials: "JD",
-    amount: "+$42.50",
-    amountClass: "text-on-surface",
-    status: "Completed",
-    dotClass: "bg-emerald-500",
-  },
-  {
-    id: "#TXN-8841",
-    date: "Oct 24, 2023, 11:15",
-    type: "Payout",
-    typeClass: "border border-purple-100 bg-purple-50 text-purple-700",
-    typeIcon: "account_balance",
-    entity: "Spice Route Grill",
-    entityIcon: "storefront",
-    entityClass: "text-zest-orange",
-    amount: "-$1,240.00",
-    amountClass: "text-error",
-    status: "Processing",
-    dotClass: "animate-pulse bg-amber-500",
-  },
-  {
-    id: "#TXN-8840",
-    date: "Oct 23, 2023, 19:45",
-    type: "Refund",
-    typeClass: "border border-red-100 bg-red-50 text-red-700",
-    typeIcon: "keyboard_return",
-    entity: "Alice Smith",
-    entityInitials: "AS",
-    amount: "-$18.99",
-    amountClass: "text-error",
-    status: "Completed",
-    dotClass: "bg-emerald-500",
-    highlighted: true,
-  },
-  {
-    id: "#TXN-8839",
-    date: "Oct 23, 2023, 18:20",
-    type: "Order",
-    typeClass: "border border-blue-100 bg-blue-50 text-blue-700",
-    typeIcon: "shopping_bag",
-    entity: "Michael Ross",
-    entityInitials: "MR",
-    amount: "+$85.00",
-    amountClass: "text-on-surface",
-    status: "Failed",
-    dotClass: "bg-red-500",
-    statusClass: "text-error",
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import {
+  selectFilteredTransactions,
+  setCurrentPage,
+  setSearchQuery,
+  setTypeFilter,
+} from "@/lib/features/transactions/transactionsSlice";
 
 export default function TransactionsPage() {
+  const dispatch = useAppDispatch();
+  const transactions = useAppSelector(selectFilteredTransactions);
+  const {
+    searchQuery,
+    typeFilter,
+    currentPage,
+    totalRevenue,
+    netProfit,
+    pendingPayouts,
+    pendingPayoutVendors,
+  } = useAppSelector((state) => state.transactions);
+
+  const formatMoneyParts = (value: number) => {
+    const [whole, cents] = value.toFixed(2).split(".");
+    return { whole: Number(whole).toLocaleString(), cents };
+  };
+
+  const revenue = formatMoneyParts(totalRevenue);
+  const profit = formatMoneyParts(netProfit);
+  const payouts = formatMoneyParts(pendingPayouts);
+
   return (
     <div className="mx-auto max-w-7xl space-y-stack-xl p-margin-page pb-12">
       <PageHeader
@@ -95,7 +67,8 @@ export default function TransactionsPage() {
           </h3>
           <div className="mt-4 flex items-end justify-between">
             <p className="font-headline-lg text-headline-lg leading-none text-on-surface">
-              $124,592<span className="text-xl text-on-surface-variant">.00</span>
+              ${revenue.whole}
+              <span className="text-xl text-on-surface-variant">.{revenue.cents}</span>
             </p>
           </div>
           <div className="mt-4 flex items-center gap-2">
@@ -116,7 +89,8 @@ export default function TransactionsPage() {
           <h3 className="font-title-md text-title-md text-on-surface-variant">Net Profit</h3>
           <div className="mt-4 flex items-end justify-between">
             <p className="font-headline-lg text-headline-lg leading-none text-on-surface">
-              $18,688<span className="text-xl text-on-surface-variant">.80</span>
+              ${profit.whole}
+              <span className="text-xl text-on-surface-variant">.{profit.cents}</span>
             </p>
           </div>
           <div className="mt-4 flex items-center gap-2">
@@ -133,12 +107,14 @@ export default function TransactionsPage() {
           <h3 className="font-title-md text-title-md font-bold text-zest-orange">Pending Payouts</h3>
           <div className="mt-4 flex items-end justify-between">
             <p className="font-headline-lg text-headline-lg leading-none text-on-surface">
-              $4,240<span className="text-xl text-on-surface-variant">.50</span>
+              ${payouts.whole}
+              <span className="text-xl text-on-surface-variant">.{payouts.cents}</span>
             </p>
           </div>
           <div className="mt-4 flex items-center gap-2">
             <span className="font-body-sm text-body-sm text-on-surface-variant">
-              for <span className="font-bold text-on-surface">12</span> vendors awaiting transfer
+              for <span className="font-bold text-on-surface">{pendingPayoutVendors}</span> vendors awaiting
+              transfer
             </span>
           </div>
           <div className="absolute right-4 bottom-4">
@@ -163,14 +139,20 @@ export default function TransactionsPage() {
               <input
                 type="text"
                 placeholder="Search ID or Entity..."
+                value={searchQuery}
+                onChange={(event) => dispatch(setSearchQuery(event.target.value))}
                 className="w-full rounded-md border border-outline-variant bg-white py-1.5 pr-3 pl-9 text-on-surface transition-all outline-none focus:border-zest-orange focus:ring-1 focus:ring-zest-orange"
               />
             </div>
-            <select className="rounded-md border border-outline-variant bg-white py-1.5 pr-8 pl-3 text-on-surface outline-none focus:border-zest-orange">
-              <option>All Types</option>
-              <option>Orders</option>
-              <option>Payouts</option>
-              <option>Refunds</option>
+            <select
+              value={typeFilter}
+              onChange={(event) => dispatch(setTypeFilter(event.target.value))}
+              className="rounded-md border border-outline-variant bg-white py-1.5 pr-8 pl-3 text-on-surface outline-none focus:border-zest-orange"
+            >
+              <option value="All">All Types</option>
+              <option value="Order">Orders</option>
+              <option value="Payout">Payouts</option>
+              <option value="Refund">Refunds</option>
             </select>
           </div>
         </div>
@@ -243,7 +225,15 @@ export default function TransactionsPage() {
           </table>
         </div>
 
-        <Pagination from={1} to={4} total={2492} noun="transactions" currentPage={1} totalPages={3} />
+        <Pagination
+          from={transactions.length ? 1 : 0}
+          to={transactions.length}
+          total={2492}
+          noun="transactions"
+          currentPage={currentPage}
+          totalPages={3}
+          onPageChange={(page) => dispatch(setCurrentPage(page))}
+        />
       </div>
     </div>
   );

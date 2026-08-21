@@ -1,109 +1,74 @@
+"use client";
+
 import PageHeader from "@/components/PageHeader";
 import Pagination from "@/components/Pagination";
-
-const metrics = [
-  {
-    label: "Active Orders",
-    value: "342",
-    icon: "speed",
-    iconClass: "bg-primary-fixed text-primary",
-    footer: (
-      <div className="mt-2 flex items-center gap-1.5">
-        <span className="relative flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-75" />
-          <span className="relative inline-flex h-3 w-3 rounded-full bg-error" />
-        </span>
-        <span className="font-label-sm text-label-sm text-error">Live</span>
-      </div>
-    ),
-  },
-  {
-    label: "Pending Acceptance",
-    value: "18",
-    valueClass: "text-error",
-    icon: "pending_actions",
-    iconClass: "bg-error-container text-zest-orange",
-    footer: (
-      <div className="mt-2 flex items-center gap-1.5">
-        <span className="material-symbols-outlined text-[16px] text-error">warning</span>
-        <span className="font-label-sm text-label-sm text-error">Requires Attention</span>
-      </div>
-    ),
-  },
-  {
-    label: "Completed Today",
-    value: "1,894",
-    icon: "task_alt",
-    iconClass: "bg-[#dcfce7] text-[#14532d]",
-    footer: (
-      <div className="mt-2 flex items-center gap-1.5">
-        <span className="material-symbols-outlined text-[16px] text-[#166534]">trending_up</span>
-        <span className="font-label-sm text-label-sm text-[#166534]">+5% vs yesterday</span>
-      </div>
-    ),
-  },
-  {
-    label: "Avg. Delivery Time",
-    value: "28",
-    valueSuffix: "mins",
-    icon: "schedule",
-    iconClass: "bg-[#dbeafe] text-[#1e40af]",
-    footer: (
-      <div className="mt-2 flex items-center gap-1.5">
-        <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
-          horizontal_rule
-        </span>
-        <span className="font-label-sm text-label-sm text-on-surface-variant">Stable</span>
-      </div>
-    ),
-  },
-];
-
-const orders = [
-  {
-    id: "#ORD-9925",
-    initials: "AM",
-    customer: "Alex Mercer",
-    vendor: "Burger Haven",
-    runner: "Alex Rivera",
-    status: "Preparing",
-    statusClass: "bg-[#fef08a] text-[#854d0e]",
-    total: "$42.50",
-  },
-  {
-    id: "#ORD-9924",
-    initials: "SR",
-    customer: "Samantha Reed",
-    vendor: "Green Bowl Co.",
-    runner: "Sarah Chen",
-    status: "Out for Delivery",
-    statusClass: "bg-[#bfdbfe] text-[#1e40af]",
-    total: "$28.75",
-  },
-  {
-    id: "#ORD-9923",
-    initials: "JT",
-    customer: "Jordan Tyler",
-    vendor: "Tokyo Noodle Bar",
-    runner: "Marcus Johnson",
-    status: "Pending",
-    statusClass: "border border-error/20 bg-error-container text-on-error-container",
-    total: "$35.00",
-    highlighted: true,
-  },
-  {
-    id: "#ORD-9922",
-    initials: "LT",
-    customer: "Linda Torres",
-    vendor: "Spicy Fiesta",
-    runner: null,
-    status: "Preparing",
-    statusClass: "bg-[#fef08a] text-[#854d0e]",
-    total: "$22.10",
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { selectFilteredOrders, setCurrentPage, setSearchQuery } from "@/lib/features/orders/ordersSlice";
 
 export default function OrdersPage() {
+  const dispatch = useAppDispatch();
+  const orders = useAppSelector(selectFilteredOrders);
+  const { searchQuery, currentPage, activeOrders, pendingAcceptance, completedToday, avgDeliveryMins } =
+    useAppSelector((state) => state.orders);
+
+  const metrics = [
+    {
+      label: "Active Orders",
+      value: activeOrders.toLocaleString(),
+      icon: "speed",
+      iconClass: "bg-primary-fixed text-primary",
+      footer: (
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="relative flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-error" />
+          </span>
+          <span className="font-label-sm text-label-sm text-error">Live</span>
+        </div>
+      ),
+    },
+    {
+      label: "Pending Acceptance",
+      value: pendingAcceptance.toLocaleString(),
+      valueClass: "text-error",
+      icon: "pending_actions",
+      iconClass: "bg-error-container text-zest-orange",
+      footer: (
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-error">warning</span>
+          <span className="font-label-sm text-label-sm text-error">Requires Attention</span>
+        </div>
+      ),
+    },
+    {
+      label: "Completed Today",
+      value: completedToday.toLocaleString(),
+      icon: "task_alt",
+      iconClass: "bg-[#dcfce7] text-[#14532d]",
+      footer: (
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-[#166534]">trending_up</span>
+          <span className="font-label-sm text-label-sm text-[#166534]">+5% vs yesterday</span>
+        </div>
+      ),
+    },
+    {
+      label: "Avg. Delivery Time",
+      value: String(avgDeliveryMins),
+      valueSuffix: "mins",
+      icon: "schedule",
+      iconClass: "bg-[#dbeafe] text-[#1e40af]",
+      footer: (
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
+            horizontal_rule
+          </span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant">Stable</span>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-stack-lg px-margin-page py-stack-xl">
       <PageHeader
@@ -151,6 +116,8 @@ export default function OrdersPage() {
               <input
                 type="text"
                 placeholder="Search Order ID or Customer..."
+                value={searchQuery}
+                onChange={(event) => dispatch(setSearchQuery(event.target.value))}
                 className="w-full rounded-md border border-outline-variant bg-surface py-2 pr-3 pl-10 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant outline-none focus:border-transparent focus:ring-2 focus:ring-zest-orange"
               />
             </div>
@@ -223,7 +190,15 @@ export default function OrdersPage() {
           </table>
         </div>
 
-        <Pagination from={1} to={4} total={342} noun="entries" currentPage={1} totalPages={3} />
+        <Pagination
+          from={orders.length ? 1 : 0}
+          to={orders.length}
+          total={activeOrders}
+          noun="entries"
+          currentPage={currentPage}
+          totalPages={3}
+          onPageChange={(page) => dispatch(setCurrentPage(page))}
+        />
       </div>
     </div>
   );
