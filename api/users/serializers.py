@@ -68,3 +68,4 @@ class UserSerializer(serializers.Serializer):
     phone_number = serializers.CharField(read_only=True)
     full_name = serializers.CharField(read_only=True)
     is_phone_verified = serializers.BooleanField(read_only=True)
+    is_staff = serializers.BooleanField(read_only=True)
