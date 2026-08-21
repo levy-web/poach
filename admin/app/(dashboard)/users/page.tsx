@@ -1,7 +1,7 @@
 import PageHeader from "@/components/PageHeader";
-import { getUserStats, getUsers, USERS_PAGE_SIZE } from "@/lib/dal";
-import UsersPagination from "./UsersPagination";
-import UsersSearch from "./UsersSearch";
+import TablePagination from "@/components/TablePagination";
+import TableSearch from "@/components/TableSearch";
+import { getUserStats, getUsers, LIST_PAGE_SIZE } from "@/lib/dal";
 
 function initialsOf(user: { full_name: string; phone_number: string }) {
   const source = user.full_name.trim();
@@ -62,13 +62,13 @@ export default async function UsersPage({
   const requestedPage = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
-  const [{ users, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
+  const [{ items: users, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
     getUsers({ page, search }),
     getUserStats(),
   ]);
 
-  const from = total === 0 ? 0 : (page - 1) * USERS_PAGE_SIZE + 1;
-  const to = Math.min(page * USERS_PAGE_SIZE, total);
+  const from = total === 0 ? 0 : (page - 1) * LIST_PAGE_SIZE + 1;
+  const to = Math.min(page * LIST_PAGE_SIZE, total);
   const columns = ["User", "Phone", "Join Date", "Total Orders", "Status", "Actions"];
 
   return (
@@ -108,7 +108,7 @@ export default async function UsersPage({
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-surface-container-highest bg-surface-container-lowest shadow-standard">
         <div className="flex flex-col items-center justify-between gap-4 border-b border-surface-container-high bg-surface-cream p-stack-md sm:flex-row">
-          <UsersSearch initialValue={search} />
+          <TableSearch initialValue={search} placeholder="Search by name or phone..." />
           <div className="flex w-full gap-3 sm:w-auto">
             <button className="flex flex-1 items-center justify-center gap-2 rounded-md border border-outline-warm bg-surface-cream px-4 py-2 font-label-md text-label-md text-on-surface transition-colors hover:bg-surface-container sm:flex-none">
               <span className="material-symbols-outlined text-sm">filter_list</span>
@@ -228,10 +228,11 @@ export default async function UsersPage({
           </table>
         </div>
 
-        <UsersPagination
+        <TablePagination
           from={from}
           to={to}
           total={total}
+          noun="users"
           currentPage={page}
           totalPages={totalPages}
         />

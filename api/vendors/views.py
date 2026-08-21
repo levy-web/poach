@@ -1,4 +1,10 @@
+from django.db.models import Count, Q
 from rest_framework import permissions, viewsets
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from core.pagination import OptInPageNumberPagination
 
 from .models import MenuItem, VendorProfile
 from .serializers import MenuItemSerializer, VendorProfileSerializer
@@ -22,6 +28,7 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
 
     serializer_class = VendorProfileSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = OptInPageNumberPagination
 
     def get_queryset(self):
         if self.request.user and self.request.user.is_staff:
@@ -29,10 +36,28 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
         else:
             qs = VendorProfile.objects.filter(is_approved=True)
 
+        qs = qs.select_related("zone", "user").annotate(
+            active_menu_item_count=Count(
+                "menu_items", filter=Q(menu_items__is_available=True)
+            )
+        )
+
         zone_id = self.request.query_params.get("zone")
         if zone_id:
             qs = qs.filter(zone_id=zone_id)
-        return qs
+
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(business_name__icontains=search)
+                | Q(user__phone_number__icontains=search)
+                | Q(zone__name__icontains=search)
+            )
+
+        # Model Meta orders by business_name, which isn't unique — without a
+        # tiebreaker two vendors sharing a name can swap places between page
+        # requests and be duplicated or skipped.
+        return qs.order_by("business_name", "id")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
@@ -64,3 +89,22 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+
+class VendorStatsView(APIView):
+    """
+    Headline counts for the admin console's vendor page. Staff-only: it
+    reports on unapproved vendors, which the public list deliberately hides.
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        return Response(
+            {
+                "total_vendors": VendorProfile.objects.count(),
+                "approved_vendors": VendorProfile.objects.filter(is_approved=True).count(),
+                "pending_vendors": VendorProfile.objects.filter(is_approved=False).count(),
+                "active_menu_items": MenuItem.objects.filter(is_available=True).count(),
+            }
+        )

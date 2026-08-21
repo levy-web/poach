@@ -3,16 +3,19 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Pagination from "@/components/Pagination";
 
-export default function UsersPagination({
+/** Drives the `page` URL param for a server-rendered table. */
+export default function TablePagination({
   from,
   to,
   total,
+  noun,
   currentPage,
   totalPages,
 }: {
   from: number;
   to: number;
   total: number;
+  noun: string;
   currentPage: number;
   totalPages: number;
 }) {
@@ -35,7 +38,7 @@ export default function UsersPagination({
       from={from}
       to={to}
       total={total}
-      noun="users"
+      noun={noun}
       currentPage={currentPage}
       totalPages={totalPages}
       onPageChange={goToPage}

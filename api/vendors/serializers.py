@@ -6,6 +6,10 @@ from .models import MenuItem, VendorProfile
 class VendorProfileSerializer(serializers.ModelSerializer):
     zone_name = serializers.CharField(source="zone.name", read_only=True)
     user_phone = serializers.CharField(source="user.phone_number", read_only=True)
+    # Populated by an annotation on the list queryset. Defaults to None on
+    # detail routes (and any caller that doesn't annotate) rather than
+    # triggering a COUNT per row.
+    active_menu_item_count = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = VendorProfile
@@ -20,6 +24,7 @@ class VendorProfileSerializer(serializers.ModelSerializer):
             "commission_pct",
             "is_approved",
             "wallet_balance",
+            "active_menu_item_count",
             "created_at",
             "updated_at",
         ]

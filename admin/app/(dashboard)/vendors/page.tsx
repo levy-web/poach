@@ -1,207 +1,238 @@
-"use client";
-
-import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
-import Pagination from "@/components/Pagination";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import {
-  selectFilteredVendors,
-  setCategoryFilter,
-  setCurrentPage,
-  setSearchQuery,
-} from "@/lib/features/vendors/vendorsSlice";
+import TablePagination from "@/components/TablePagination";
+import TableSearch from "@/components/TableSearch";
+import { getVendorStats, getVendors, LIST_PAGE_SIZE } from "@/lib/dal";
 
-export default function VendorsPage() {
-  const dispatch = useAppDispatch();
-  const vendors = useAppSelector(selectFilteredVendors);
-  const { searchQuery, categoryFilter, currentPage, totalActiveVendors, avgRating, pendingMenuUpdates } =
-    useAppSelector((state) => state.vendors);
+function initialsOf(businessName: string) {
+  const trimmed = businessName.trim();
+  if (!trimmed) return "?";
+  return trimmed
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  accent = false,
+  valueClass = "text-on-surface",
+  footer,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  accent?: boolean;
+  valueClass?: string;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-xl border bg-surface-container-lowest p-stack-lg shadow-standard ${
+        accent ? "border-zest-orange/30" : "border-surface-container-highest"
+      }`}
+    >
+      <div className="absolute top-0 right-0 p-stack-md opacity-10 transition-opacity group-hover:opacity-20">
+        <span className="material-symbols-outlined text-[80px] text-zest-orange">{icon}</span>
+      </div>
+      <p className="mb-2 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase">
+        {label}
+      </p>
+      <h3 className={`font-display-lg text-display-lg ${valueClass}`}>{value}</h3>
+      {footer && <div className="mt-4">{footer}</div>}
+    </div>
+  );
+}
+
+export default async function VendorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string }>;
+}) {
+  const { page: pageParam, q } = await searchParams;
+  const search = q?.trim() ?? "";
+  const requestedPage = Number.parseInt(pageParam ?? "1", 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
+  const [{ items: vendors, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
+    getVendors({ page, search }),
+    getVendorStats(),
+  ]);
+
+  const from = total === 0 ? 0 : (page - 1) * LIST_PAGE_SIZE + 1;
+  const to = Math.min(page * LIST_PAGE_SIZE, total);
+  const columns = ["Vendor", "Zone", "Phone", "Status", "Active Menu Items", "Actions"];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-stack-xl px-margin-page py-stack-xl">
+    <div className="p-margin-page">
       <PageHeader
         title="Vendor Management"
         subtitle="Manage restaurant partners, track performance, and oversee active menus across the platform."
         action={
-          <button className="flex items-center gap-2 rounded-md bg-zest-orange px-6 py-3 font-label-md text-label-md text-white shadow-[0px_4px_20px_rgba(171,53,0,0.2)] transition-colors duration-200 active:scale-95 hover:bg-primary">
-            <span className="material-symbols-outlined text-[20px]">add</span>
+          <button className="flex items-center gap-2 rounded-md bg-zest-orange px-6 py-3 font-label-md text-label-md text-on-primary shadow-sm transition-colors hover:bg-primary">
+            <span className="material-symbols-outlined">add</span>
             Add New Vendor
           </button>
         }
       />
 
-      <div className="grid grid-cols-1 gap-gutter md:grid-cols-3">
-        <div className="group relative overflow-hidden rounded-xl border border-surface-container-highest bg-surface-container-lowest p-stack-lg shadow-standard">
-          <div className="absolute top-0 right-0 p-stack-md opacity-10 transition-opacity group-hover:opacity-20">
-            <span className="material-symbols-outlined text-[80px] text-zest-orange">storefront</span>
-          </div>
-          <p className="mb-2 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase">
-            Total Active Vendors
-          </p>
-          <h3 className="font-display-lg text-display-lg text-on-surface">
-            {totalActiveVendors.toLocaleString()}
-          </h3>
-          <div className="mt-4 flex w-fit items-center gap-2 rounded-full bg-green-50 px-2 py-1 font-label-sm text-label-sm text-green-700">
-            <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            +12 this month
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-xl border border-surface-container-highest bg-surface-container-lowest p-stack-lg shadow-standard">
-          <div className="absolute top-0 right-0 p-stack-md opacity-10 transition-opacity group-hover:opacity-20">
-            <span className="material-symbols-outlined text-[80px] text-zest-orange">star</span>
-          </div>
-          <p className="mb-2 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase">
-            Avg Vendor Rating
-          </p>
-          <h3 className="font-display-lg text-display-lg text-on-surface">
-            {avgRating}
-            <span className="text-title-lg text-on-surface-variant">/5.0</span>
-          </h3>
-          <div className="mt-4 flex w-fit items-center gap-2 rounded-full bg-surface-container px-2 py-1 font-label-sm text-label-sm text-on-surface-variant">
-            Based on 12k reviews
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-xl border border-zest-orange/30 bg-surface-container-lowest p-stack-lg shadow-standard">
-          <div className="absolute top-0 right-0 p-stack-md opacity-10 transition-opacity group-hover:opacity-20">
-            <span className="material-symbols-outlined text-[80px] text-zest-orange">update</span>
-          </div>
-          <p className="mb-2 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase">
-            Pending Menu Updates
-          </p>
-          <h3 className="font-display-lg text-display-lg text-zest-orange">{pendingMenuUpdates}</h3>
-          <div className="mt-4 flex w-fit cursor-pointer items-center gap-2 rounded-full bg-primary-fixed-dim/30 px-2 py-1 font-label-sm text-label-sm text-zest-orange transition-colors hover:bg-primary-fixed-dim/50">
-            Review Now <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-          </div>
-        </div>
+      <div className="mb-stack-xl grid grid-cols-1 gap-gutter md:grid-cols-3">
+        <StatCard
+          label="Total Active Vendors"
+          value={stats ? stats.approved_vendors.toLocaleString() : "—"}
+          icon="storefront"
+          footer={
+            stats && (
+              <div className="flex w-fit items-center gap-2 rounded-full bg-surface-container px-2 py-1 font-label-sm text-label-sm text-on-surface-variant">
+                {stats.total_vendors.toLocaleString()} total on the platform
+              </div>
+            )
+          }
+        />
+        <StatCard
+          label="Active Menu Items"
+          value={stats ? stats.active_menu_items.toLocaleString() : "—"}
+          icon="restaurant_menu"
+          footer={
+            <div className="flex w-fit items-center gap-2 rounded-full bg-surface-container px-2 py-1 font-label-sm text-label-sm text-on-surface-variant">
+              Currently available to order
+            </div>
+          }
+        />
+        <StatCard
+          label="Pending Approval"
+          value={stats ? stats.pending_vendors.toLocaleString() : "—"}
+          icon="pending_actions"
+          accent
+          valueClass="text-zest-orange"
+          footer={
+            <div className="flex w-fit items-center gap-2 rounded-full bg-primary-fixed-dim/30 px-2 py-1 font-label-sm text-label-sm text-zest-orange">
+              Awaiting review
+            </div>
+          }
+        />
       </div>
 
       <div className="overflow-hidden rounded-xl border border-surface-container-highest bg-surface-container-lowest shadow-standard">
         <div className="flex flex-col items-center justify-between gap-4 border-b border-surface-container-high bg-surface-cream/50 p-stack-md sm:flex-row">
           <h3 className="font-title-lg text-title-lg text-on-surface">Vendor Directory</h3>
-          <div className="flex w-full items-center gap-3 sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">
-                search
-              </span>
-              <input
-                type="text"
-                placeholder="Search vendors..."
-                value={searchQuery}
-                onChange={(event) => dispatch(setSearchQuery(event.target.value))}
-                className="w-full rounded-md border border-outline-variant bg-surface px-4 py-2 pl-10 font-body-sm text-body-sm shadow-sm transition-all focus:border-zest-orange focus:ring-2 focus:ring-zest-orange"
-              />
-            </div>
-            <div className="relative">
-              <select
-                value={categoryFilter}
-                onChange={(event) => dispatch(setCategoryFilter(event.target.value))}
-                className="cursor-pointer appearance-none rounded-md border border-outline-variant bg-surface px-4 py-2 pr-10 font-body-sm text-body-sm text-on-surface shadow-sm transition-all focus:border-zest-orange focus:ring-2 focus:ring-zest-orange"
-              >
-                <option value="All">All Categories</option>
-                <option value="Fast Food">Fast Food</option>
-                <option value="Healthy">Healthy</option>
-                <option value="Asian">Asian</option>
-                <option value="Mexican">Mexican</option>
-              </select>
-              <span className="material-symbols-outlined pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant">
-                expand_more
-              </span>
-            </div>
-          </div>
+          <TableSearch
+            initialValue={search}
+            placeholder="Search vendors..."
+            className="w-full sm:w-64"
+          />
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+          <table className="w-full min-w-[800px] border-collapse text-left">
             <thead>
               <tr className="border-b border-surface-container-high bg-surface-cream/30">
-                {["Vendor", "Category", "Status", "Rating", "Active Menu Items", "Actions"].map((h) => (
+                {columns.map((heading) => (
                   <th
-                    key={h}
+                    key={heading}
                     className={`px-stack-md py-4 font-label-sm text-label-sm tracking-wider text-on-surface-variant uppercase ${
-                      h === "Actions" ? "text-right" : ""
+                      heading === "Actions" ? "text-right" : ""
                     }`}
                   >
-                    {h}
+                    {heading}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-high font-body-md text-body-md text-on-surface">
-              {vendors.map((vendor) => (
-                <tr key={vendor.name} className="group transition-colors hover:bg-surface-container-low">
-                  <td className="px-stack-md py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-outline-variant bg-white p-1 shadow-sm">
-                        {vendor.logo ? (
-                          <Image
-                            src={vendor.logo}
-                            alt={vendor.name}
-                            width={40}
-                            height={40}
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <span className="font-bold text-on-surface-variant">{vendor.initials}</span>
-                        )}
-                      </div>
-                      <span className="font-title-md text-title-md font-semibold">{vendor.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-stack-md py-4 text-on-surface-variant">{vendor.category}</td>
-                  <td className="px-stack-md py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-label-sm text-label-sm ${vendor.statusClass}`}
-                    >
-                      {vendor.status}
-                    </span>
-                  </td>
-                  <td className="px-stack-md py-4">
-                    {vendor.rating ? (
-                      <div className="flex items-center gap-1 font-semibold">
-                        <span className="material-symbols-outlined fill text-[16px] text-[#f59e0b]">
-                          star
-                        </span>
-                        {vendor.rating}
-                      </div>
+              {vendors.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="p-stack-xl text-center font-body-md text-body-md text-on-surface-variant"
+                  >
+                    {failed ? (
+                      "Couldn't load vendors — the API didn't respond."
+                    ) : outOfRange ? (
+                      <>
+                        Page {page} is past the end of the list.{" "}
+                        <a
+                          href={search ? `/vendors?q=${encodeURIComponent(search)}` : "/vendors"}
+                          className="text-zest-orange underline"
+                        >
+                          Back to the first page
+                        </a>
+                      </>
+                    ) : search ? (
+                      `No vendors match “${search}”.`
                     ) : (
-                      <span className="font-label-sm text-on-surface-variant italic">New</span>
+                      "No vendors yet."
                     )}
                   </td>
-                  <td className="px-stack-md py-4 text-on-surface-variant">{vendor.items}</td>
-                  <td className="px-stack-md py-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                      {vendor.rating && (
+                </tr>
+              ) : (
+                vendors.map((vendor) => (
+                  <tr
+                    key={vendor.id}
+                    className="group transition-colors hover:bg-surface-container-low"
+                  >
+                    <td className="px-stack-md py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-outline-variant bg-white p-1 font-bold text-on-surface-variant shadow-sm">
+                          {initialsOf(vendor.business_name)}
+                        </div>
+                        <span className="font-title-md text-title-md font-semibold">
+                          {vendor.business_name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-stack-md py-4 text-on-surface-variant">{vendor.zone_name}</td>
+                    <td className="px-stack-md py-4 text-on-surface-variant">
+                      {vendor.user_phone}
+                    </td>
+                    <td className="px-stack-md py-4">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-label-sm text-label-sm ${
+                          vendor.is_approved
+                            ? "bg-[#e6f4ea] text-[#137333]"
+                            : "bg-primary-fixed-dim/30 text-zest-orange"
+                        }`}
+                      >
+                        {vendor.is_approved ? "Approved" : "Pending"}
+                      </span>
+                    </td>
+                    <td className="px-stack-md py-4 text-on-surface-variant">
+                      {vendor.active_menu_item_count ?? 0}
+                    </td>
+                    <td className="px-stack-md py-4 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                           className="rounded-md p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-zest-orange"
                           title="View Menu"
                         >
-                          <span className="material-symbols-outlined text-[20px]">restaurant_menu</span>
+                          <span className="material-symbols-outlined text-[20px]">
+                            restaurant_menu
+                          </span>
                         </button>
-                      )}
-                      <button
-                        className="rounded-md p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-zest-orange"
-                        title="Edit Vendor"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">edit</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <button
+                          className="rounded-md p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-zest-orange"
+                          title="Edit Vendor"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">edit</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        <Pagination
-          from={vendors.length ? 1 : 0}
-          to={vendors.length}
-          total={totalActiveVendors}
+        <TablePagination
+          from={from}
+          to={to}
+          total={total}
           noun="vendors"
-          currentPage={currentPage}
-          totalPages={3}
-          onPageChange={(page) => dispatch(setCurrentPage(page))}
+          currentPage={page}
+          totalPages={totalPages}
         />
       </div>
     </div>

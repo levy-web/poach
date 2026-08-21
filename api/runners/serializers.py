@@ -6,6 +6,10 @@ from .models import RunnerProfile
 class RunnerProfileSerializer(serializers.ModelSerializer):
     zone_name = serializers.CharField(source="zone.name", read_only=True)
     user_phone = serializers.CharField(source="user.phone_number", read_only=True)
+    user_full_name = serializers.CharField(source="user.full_name", read_only=True)
+    # Populated by an annotation on the list queryset; None elsewhere rather
+    # than costing a COUNT per row.
+    active_order_count = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = RunnerProfile
@@ -13,6 +17,7 @@ class RunnerProfileSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "user_phone",
+            "user_full_name",
             "zone",
             "zone_name",
             "is_approved",
@@ -20,6 +25,7 @@ class RunnerProfileSerializer(serializers.ModelSerializer):
             "wallet_balance",
             "rating_avg",
             "rating_count",
+            "active_order_count",
             "created_at",
             "updated_at",
         ]
@@ -30,6 +36,7 @@ class RunnerProfileSerializer(serializers.ModelSerializer):
             "wallet_balance",
             "rating_avg",
             "rating_count",
+            "active_order_count",
             "created_at",
             "updated_at",
         ]
