@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS, FOOTER_NAV_ITEMS, type NavItem } from "@/lib/nav";
+import { logout } from "@/lib/auth-actions";
+
+const navItemClass =
+  "relative flex items-center gap-3 rounded-md px-4 py-3 font-title-md text-title-md transition-colors duration-200 active:scale-95 text-secondary hover:bg-surface-container-high dark:text-secondary-fixed dark:hover:bg-tertiary-container";
 
 function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
   return (
@@ -21,6 +25,20 @@ function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean;
       <span className={`material-symbols-outlined ${active ? "fill" : ""}`}>{item.icon}</span>
       <span>{item.label}</span>
     </Link>
+  );
+}
+
+// A plain `<Link href="/logout">` gets auto-prefetched by Next.js, which
+// would silently trigger the logout side effect just from being rendered.
+// A form submission only fires on an actual click.
+function LogoutButton({ item }: { item: NavItem }) {
+  return (
+    <form action={logout}>
+      <button type="submit" className={`w-full ${navItemClass}`}>
+        <span className="material-symbols-outlined">{item.icon}</span>
+        <span>{item.label}</span>
+      </button>
+    </form>
   );
 }
 
@@ -55,9 +73,13 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
       </nav>
 
       <div className="mt-auto flex flex-col gap-1 border-t border-surface-container-high pt-stack-md">
-        {FOOTER_NAV_ITEMS.map((item) => (
-          <NavLink key={item.href} item={item} active={pathname === item.href} onNavigate={onClose} />
-        ))}
+        {FOOTER_NAV_ITEMS.map((item) =>
+          item.href === "/logout" ? (
+            <LogoutButton key={item.href} item={item} />
+          ) : (
+            <NavLink key={item.href} item={item} active={pathname === item.href} onNavigate={onClose} />
+          ),
+        )}
       </div>
     </>
   );

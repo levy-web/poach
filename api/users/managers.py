@@ -1,5 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager
 
+from .phone import normalize_phone_number
+
 
 class UserManager(BaseUserManager):
     """
@@ -38,4 +40,4 @@ class UserManager(BaseUserManager):
 
     @staticmethod
     def normalize_phone(phone_number):
-        return phone_number.strip().replace(" ", "")
+        return normalize_phone_number(phone_number)
