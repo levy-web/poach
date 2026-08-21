@@ -11,6 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Orders", href: "/orders", icon: "shopping_cart" },
   { label: "Runners", href: "/runners", icon: "delivery_dining" },
   { label: "Transactions", href: "/transactions", icon: "payments" },
+  { label: "Zones", href: "/places", icon: "map" },
 ];
 
 export const FOOTER_NAV_ITEMS: NavItem[] = [

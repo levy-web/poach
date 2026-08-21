@@ -88,13 +88,16 @@ class ZoneAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(Zone.objects.filter(id=self.active_zone.id).exists())
 
-    def test_staff_can_delete(self):
+    def test_staff_cannot_delete(self):
         self.client.force_authenticate(self.staff)
 
         response = self.client.delete(reverse("zone-detail", args=[self.active_zone.id]))
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Zone.objects.filter(id=self.active_zone.id).exists())
+        # Deletion was removed deliberately: zones are retired with
+        # is_active=False, and PROTECT from buildings/vendors/runners/orders
+        # would block a real delete anyway.
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertTrue(Zone.objects.filter(id=self.active_zone.id).exists())
 
     def test_non_staff_cannot_see_inactive_zone_detail(self):
         self.client.force_authenticate(self.customer)

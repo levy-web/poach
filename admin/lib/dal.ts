@@ -83,13 +83,20 @@ async function authorizedFetch(path: string) {
  */
 async function fetchListPage<T>(
   basePath: string,
-  { page, search }: { page: number; search: string },
+  {
+    page,
+    search,
+    extra,
+  }: { page: number; search: string; extra?: Record<string, string> },
 ): Promise<ListPage<T>> {
   const params = new URLSearchParams({
     page: String(page),
     page_size: String(LIST_PAGE_SIZE),
   });
   if (search) params.set("search", search);
+  for (const [key, value] of Object.entries(extra ?? {})) {
+    if (value) params.set(key, value);
+  }
 
   const { data, status } = await authorizedFetch(`${basePath}?${params}`);
 
@@ -220,4 +227,41 @@ export async function getZones(): Promise<Zone[]> {
   const { data } = await authorizedFetch("/api/zones/");
   if (!Array.isArray(data)) return [];
   return data as Zone[];
+}
+
+export interface ZoneDetail extends Zone {
+  delivery_fee: string | null;
+  commission_pct: string | null;
+  building_count: number | null;
+  vendor_count: number | null;
+  runner_count: number | null;
+}
+
+/** Full zone list with admin counts. Zones are few, so this isn't paged. */
+export async function getZoneDetails(search = ""): Promise<ZoneDetail[]> {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  const query = params.size ? `?${params}` : "";
+
+  const { data } = await authorizedFetch(`/api/zones/${query}`);
+  if (!Array.isArray(data)) return [];
+  return data as ZoneDetail[];
+}
+
+export interface Building {
+  id: number;
+  zone: number;
+  zone_name: string;
+  name: string;
+  landmark: string;
+  entry_details: string;
+  is_active: boolean;
+}
+
+export function getBuildings(opts: { page?: number; search?: string; zone?: string }) {
+  return fetchListPage<Building>("/api/locations/buildings/", {
+    page: opts.page ?? 1,
+    search: opts.search ?? "",
+    extra: { zone: opts.zone ?? "" },
+  });
 }
