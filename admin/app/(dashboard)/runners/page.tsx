@@ -1,7 +1,9 @@
 import PageHeader from "@/components/PageHeader";
 import TablePagination from "@/components/TablePagination";
 import TableSearch from "@/components/TableSearch";
-import { getRunnerStats, getRunners, LIST_PAGE_SIZE, type Runner } from "@/lib/dal";
+import { getRunnerStats, getRunners, getZones, LIST_PAGE_SIZE, type Runner } from "@/lib/dal";
+import NewRunnerButton from "./NewRunnerButton";
+import RunnersTableActions from "./RunnersTableActions";
 
 function displayName(runner: Runner) {
   return runner.user_full_name?.trim() || runner.user_phone;
@@ -76,10 +78,8 @@ export default async function RunnersPage({
   const requestedPage = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
-  const [{ items: runners, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
-    getRunners({ page, search }),
-    getRunnerStats(),
-  ]);
+  const [{ items: runners, total, totalPages, failed, outOfRange }, stats, zones] =
+    await Promise.all([getRunners({ page, search }), getRunnerStats(), getZones()]);
 
   const from = total === 0 ? 0 : (page - 1) * LIST_PAGE_SIZE + 1;
   const to = Math.min(page * LIST_PAGE_SIZE, total);
@@ -90,12 +90,7 @@ export default async function RunnersPage({
       <PageHeader
         title="Runner Fleet"
         subtitle="Manage and monitor delivery partner activity."
-        action={
-          <button className="flex items-center gap-2 rounded-md bg-zest-orange px-6 py-3 font-label-md text-label-md text-on-primary shadow-sm transition-colors hover:bg-primary">
-            <span className="material-symbols-outlined">add</span>
-            Onboard Runner
-          </button>
-        }
+        action={<NewRunnerButton zones={zones} />}
       />
 
       <div className="mb-stack-xl grid grid-cols-1 gap-gutter md:grid-cols-3">
@@ -232,20 +227,7 @@ export default async function RunnersPage({
                         )}
                       </td>
                       <td className="px-stack-md py-2 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button
-                            className="rounded-md p-2 text-secondary transition-colors hover:bg-primary-fixed hover:text-zest-orange"
-                            title="Edit"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">edit</span>
-                          </button>
-                          <button
-                            className="rounded-md p-2 text-secondary transition-colors hover:bg-primary-fixed hover:text-zest-orange"
-                            title="View Profile"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">visibility</span>
-                          </button>
-                        </div>
+                        <RunnersTableActions runner={runner} zones={zones} />
                       </td>
                     </tr>
                   );

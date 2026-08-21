@@ -225,3 +225,49 @@ class AdminUserManagementTests(APITestCase):
         self.customer.refresh_from_db()
         self.assertFalse(self.customer.is_active)
         self.assertGreater(BlacklistedToken.objects.count(), before)
+
+    # --- account picker filtering ----------------------------------------
+
+    def test_available_for_vendor_excludes_accounts_that_already_have_one(self):
+        """The vendor form's picker must not offer an account that already
+        owns a vendor profile — user is OneToOne, so saving would fail."""
+        from vendors.models import VendorProfile
+        from zones.models import Zone
+
+        zone = Zone.objects.create(name="Kilimani")
+        VendorProfile.objects.create(user=self.customer, zone=zone, business_name="Taken")
+
+        self.client.force_authenticate(self.staff)
+        response = self.client.get(self.list_url, {"available_for": "vendor"})
+
+        returned = {row["id"] for row in response.data["results"]}
+        self.assertNotIn(self.customer.pk, returned)
+        self.assertIn(self.staff.pk, returned)
+
+    def test_available_for_runner_excludes_accounts_that_already_have_one(self):
+        from runners.models import RunnerProfile
+        from zones.models import Zone
+
+        zone = Zone.objects.create(name="Kilimani")
+        RunnerProfile.objects.create(user=self.customer, zone=zone)
+
+        self.client.force_authenticate(self.staff)
+        response = self.client.get(self.list_url, {"available_for": "runner"})
+
+        returned = {row["id"] for row in response.data["results"]}
+        self.assertNotIn(self.customer.pk, returned)
+
+    def test_available_for_vendor_still_offers_an_existing_runner(self):
+        """The two roles are independent — being a runner shouldn't block
+        someone from also owning a vendor."""
+        from runners.models import RunnerProfile
+        from zones.models import Zone
+
+        zone = Zone.objects.create(name="Kilimani")
+        RunnerProfile.objects.create(user=self.customer, zone=zone)
+
+        self.client.force_authenticate(self.staff)
+        response = self.client.get(self.list_url, {"available_for": "vendor"})
+
+        returned = {row["id"] for row in response.data["results"]}
+        self.assertIn(self.customer.pk, returned)

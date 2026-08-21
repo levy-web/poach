@@ -1,12 +1,18 @@
 from rest_framework import serializers
 
+from vendors.serializers import UserByPhoneMixin
+
 from .models import RunnerProfile
 
 
-class RunnerProfileSerializer(serializers.ModelSerializer):
+class RunnerProfileSerializer(UserByPhoneMixin, serializers.ModelSerializer):
+    user_lookup_label = "runner"
+
     zone_name = serializers.CharField(source="zone.name", read_only=True)
     user_phone = serializers.CharField(source="user.phone_number", read_only=True)
     user_full_name = serializers.CharField(source="user.full_name", read_only=True)
+    # Write-only alternative to posting `user` as a numeric PK.
+    user_phone_number = serializers.CharField(write_only=True, required=False)
     # Populated by an annotation on the list queryset; None elsewhere rather
     # than costing a COUNT per row.
     active_order_count = serializers.IntegerField(read_only=True, default=None)
@@ -18,6 +24,7 @@ class RunnerProfileSerializer(serializers.ModelSerializer):
             "user",
             "user_phone",
             "user_full_name",
+            "user_phone_number",
             "zone",
             "zone_name",
             "is_approved",
@@ -40,6 +47,10 @@ class RunnerProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        extra_kwargs = {"user": {"required": False}}
+
+    def validate(self, attrs):
+        return self.resolve_user(super().validate(attrs))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -48,5 +59,5 @@ class RunnerProfileSerializer(serializers.ModelSerializer):
         if not is_staff:
             # A runner may only toggle is_online on their own profile —
             # onboarding (user, zone) and approval are admin-driven.
-            for field_name in ("user", "zone", "is_approved"):
+            for field_name in ("user", "user_phone_number", "zone", "is_approved"):
                 self.fields[field_name].read_only = True

@@ -153,18 +153,24 @@ class RunnerProfileAPITests(APITestCase):
             reverse("runner-profile-detail", args=[self.runner_profile.id])
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # The viewset has no destroy action at all, so this is now 405 rather
+        # than the 403 the permission class used to produce. Either way the
+        # profile survives, which is what this test is really asserting.
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertTrue(RunnerProfile.objects.filter(id=self.runner_profile.id).exists())
 
-    def test_staff_can_delete_profile(self):
+    def test_staff_cannot_delete_profile_either(self):
+        """Deletion was removed deliberately: runners are retired by clearing
+        is_approved, which keeps their delivery history intact. Order.runner
+        is PROTECT, so deleting an active runner would fail anyway."""
         self.client.force_authenticate(self.staff)
 
         response = self.client.delete(
             reverse("runner-profile-detail", args=[self.runner_profile.id])
         )
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(RunnerProfile.objects.filter(id=self.runner_profile.id).exists())
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertTrue(RunnerProfile.objects.filter(id=self.runner_profile.id).exists())
 
     def test_staff_filter_by_zone(self):
         self.client.force_authenticate(self.staff)

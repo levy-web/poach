@@ -1,7 +1,9 @@
 import PageHeader from "@/components/PageHeader";
 import TablePagination from "@/components/TablePagination";
 import TableSearch from "@/components/TableSearch";
-import { getVendorStats, getVendors, LIST_PAGE_SIZE } from "@/lib/dal";
+import { getVendorStats, getVendors, getZones, LIST_PAGE_SIZE } from "@/lib/dal";
+import NewVendorButton from "./NewVendorButton";
+import VendorsTableActions from "./VendorsTableActions";
 
 function initialsOf(businessName: string) {
   const trimmed = businessName.trim();
@@ -56,26 +58,19 @@ export default async function VendorsPage({
   const requestedPage = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
-  const [{ items: vendors, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
-    getVendors({ page, search }),
-    getVendorStats(),
-  ]);
+  const [{ items: vendors, total, totalPages, failed, outOfRange }, stats, zones] =
+    await Promise.all([getVendors({ page, search }), getVendorStats(), getZones()]);
 
   const from = total === 0 ? 0 : (page - 1) * LIST_PAGE_SIZE + 1;
   const to = Math.min(page * LIST_PAGE_SIZE, total);
-  const columns = ["Vendor", "Zone", "Phone", "Status", "Active Menu Items", "Actions"];
+  const columns = ["Vendor", "Zone", "Pickup", "Status", "Active Menu Items", "Actions"];
 
   return (
     <div className="p-margin-page">
       <PageHeader
         title="Vendor Management"
         subtitle="Manage restaurant partners, track performance, and oversee active menus across the platform."
-        action={
-          <button className="flex items-center gap-2 rounded-md bg-zest-orange px-6 py-3 font-label-md text-label-md text-on-primary shadow-sm transition-colors hover:bg-primary">
-            <span className="material-symbols-outlined">add</span>
-            Add New Vendor
-          </button>
-        }
+        action={<NewVendorButton zones={zones} />}
       />
 
       <div className="mb-stack-xl grid grid-cols-1 gap-gutter md:grid-cols-3">
@@ -185,7 +180,9 @@ export default async function VendorsPage({
                     </td>
                     <td className="px-stack-md py-4 text-on-surface-variant">{vendor.zone_name}</td>
                     <td className="px-stack-md py-4 text-on-surface-variant">
-                      {vendor.user_phone}
+                      {vendor.pickup_building_name ?? (
+                        <span className="italic text-on-surface-variant/70">Not set</span>
+                      )}
                     </td>
                     <td className="px-stack-md py-4">
                       <span
@@ -202,22 +199,7 @@ export default async function VendorsPage({
                       {vendor.active_menu_item_count ?? 0}
                     </td>
                     <td className="px-stack-md py-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          className="rounded-md p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-zest-orange"
-                          title="View Menu"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">
-                            restaurant_menu
-                          </span>
-                        </button>
-                        <button
-                          className="rounded-md p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-zest-orange"
-                          title="Edit Vendor"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">edit</span>
-                        </button>
-                      </div>
+                      <VendorsTableActions vendor={vendor} zones={zones} />
                     </td>
                   </tr>
                 ))

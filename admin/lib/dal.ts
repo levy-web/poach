@@ -143,9 +143,11 @@ export interface Vendor {
   id: number;
   business_name: string;
   user_phone: string;
+  user_full_name: string;
   zone: number;
   zone_name: string;
-  pickup_address: string;
+  pickup_building: number | null;
+  pickup_building_name: string | null;
   commission_pct: string | null;
   is_approved: boolean;
   wallet_balance: string;
@@ -205,4 +207,17 @@ export function getRunners(opts: { page?: number; search?: string }) {
 export async function getRunnerStats(): Promise<RunnerStats | null> {
   const { data } = await authorizedFetch("/api/runners/stats/");
   return data as RunnerStats | null;
+}
+
+export interface Zone {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+/** Zone options for the vendor/runner forms. */
+export async function getZones(): Promise<Zone[]> {
+  const { data } = await authorizedFetch("/api/zones/");
+  if (!Array.isArray(data)) return [];
+  return data as Zone[];
 }

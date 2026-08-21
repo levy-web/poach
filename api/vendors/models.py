@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -24,10 +25,17 @@ class VendorProfile(ABXMixin, models.Model):
     )
 
     business_name = models.CharField(max_length=150)
-    pickup_address = models.CharField(
-        max_length=255,
+    # A registered Building rather than free text, so runners get the same
+    # name/landmark/entry details they already use for deliveries, and a
+    # vendor's pickup point can't drift out of sync with the buildings the
+    # zone actually knows about.
+    pickup_building = models.ForeignKey(
+        "locations.Building",
+        on_delete=models.PROTECT,
+        related_name="vendors",
+        null=True,
         blank=True,
-        help_text="Landmark-style description for runners to find this vendor on foot, e.g. 'Next to the green kiosk, Main Street'",
+        help_text="Registered building this vendor is collected from. Must be in the vendor's zone.",
     )
 
     # Overrides Zone.commission_pct when set. Leave blank to inherit the
@@ -63,6 +71,22 @@ class VendorProfile(ABXMixin, models.Model):
     def effective_commission_pct(self):
         """Vendor-specific override if set, else the zone's default."""
         return self.commission_pct if self.commission_pct is not None else self.zone.commission_pct
+
+    def clean(self):
+        """
+        A pickup building in a different zone would send runners to the wrong
+        neighborhood, so the two have to agree. Enforced here as well as in
+        the serializer, since the FK alone can't express the constraint.
+        """
+        super().clean()
+        if (
+            self.pickup_building_id
+            and self.zone_id
+            and self.pickup_building.zone_id != self.zone_id
+        ):
+            raise ValidationError(
+                {"pickup_building": "The pickup building must be in the vendor's zone."}
+            )
 
 
 class MenuItem(ABXMixin, models.Model):

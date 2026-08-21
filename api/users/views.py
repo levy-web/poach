@@ -304,6 +304,17 @@ class AdminUserViewSet(
             qs = qs.filter(
                 Q(full_name__icontains=search) | Q(phone_number__icontains=search)
             )
+
+        # Powers the account picker on the vendor/runner forms. Both profiles
+        # are OneToOne, so an account that already has one can't take another
+        # — offering it would only produce a confusing uniqueness error at
+        # save time.
+        available_for = self.request.query_params.get("available_for")
+        if available_for == "vendor":
+            qs = qs.filter(vendor_profile__isnull=True)
+        elif available_for == "runner":
+            qs = qs.filter(runner_profile__isnull=True)
+
         return qs
 
     def _guard_privilege_change(self, validated, instance=None):

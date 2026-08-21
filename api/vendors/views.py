@@ -1,5 +1,5 @@
 from django.db.models import Count, Q
-from rest_framework import permissions, viewsets
+from rest_framework import mixins, permissions, viewsets
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,12 +18,23 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         )
 
 
-class VendorProfileViewSet(viewsets.ModelViewSet):
+class VendorProfileViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     Onboarding is admin-driven (no self-service vendor signup), so writes
     are staff-only. Reads are open, but unapproved vendors are hidden from
     everyone except staff — an unapproved vendor shouldn't show up in
     customer search.
+
+    No destroy action: a vendor is retired by clearing `is_approved`, which
+    removes them from customer-facing listings while preserving their menu
+    and order history. Deleting would cascade away every MenuItem and be
+    blocked outright by the PROTECT on Order.vendor.
     """
 
     serializer_class = VendorProfileSerializer

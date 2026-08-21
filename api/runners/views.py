@@ -1,5 +1,5 @@
 from django.db.models import Avg, Count, Q
-from rest_framework import permissions, viewsets
+from rest_framework import mixins, permissions, viewsets
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,8 +22,9 @@ class IsStaffOrOwner(permissions.BasePermission):
     """
     Runner profiles are internal — no customer-facing visibility, unlike
     vendors. Staff manage everything; a runner may read/patch (is_online
-    only, enforced by the serializer) their own profile, but only staff
-    may delete a profile or create one (admin-driven onboarding).
+    only, enforced by the serializer) their own profile, but only staff may
+    create one (admin-driven onboarding). Nobody can delete — see the
+    viewset docstring.
     """
 
     def has_permission(self, request, view):
@@ -36,12 +37,22 @@ class IsStaffOrOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.user.is_staff:
             return True
-        if request.method == "DELETE":
-            return False
         return obj.user_id == request.user.id
 
 
-class RunnerProfileViewSet(viewsets.ModelViewSet):
+class RunnerProfileViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    No destroy action: a runner is retired by clearing `is_approved`, which
+    stops them going online or claiming jobs while keeping their delivery
+    history. Deleting would be blocked by the PROTECT on Order.runner.
+    """
+
     serializer_class = RunnerProfileSerializer
     permission_classes = [IsStaffOrOwner]
     pagination_class = OptInPageNumberPagination
