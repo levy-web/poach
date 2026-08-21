@@ -1,8 +1,13 @@
 import logging
+from datetime import timedelta
 
+from django.db.models import Count, Q
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import Throttled
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -10,6 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import OTP, User
 from .serializers import (
+    AdminUserListSerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PhoneNumberSerializer,
@@ -234,6 +240,69 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+# Window used for both the "active" and "new" user stats below.
+RECENT_ACTIVITY_DAYS = 30
+
+
+class AdminUserPagination(PageNumberPagination):
+    """
+    Scoped to the admin user list rather than set as the project-wide
+    DEFAULT_PAGINATION_CLASS, so the existing unpaginated vendor/runner
+    endpoints keep returning plain lists to their current callers.
+    """
+
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class AdminUserListView(ListAPIView):
+    """
+    Paginated, searchable account list for the admin console. Staff-only —
+    this exposes every user's phone number, so it must never be readable by
+    an ordinary authenticated customer.
+    """
+
+    serializer_class = AdminUserListSerializer
+    permission_classes = [IsAdminUser]
+    pagination_class = AdminUserPagination
+
+    def get_queryset(self):
+        # Annotated once per page instead of per row; ordered by newest
+        # first, with a unique tiebreaker so pagination can't repeat or skip
+        # a row when several accounts share a date_joined.
+        qs = User.objects.annotate(order_count=Count("orders")).order_by("-date_joined", "-id")
+
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            # A single Q rather than OR-ing two annotated querysets, which
+            # would join the orders table twice and inflate order_count.
+            qs = qs.filter(
+                Q(full_name__icontains=search) | Q(phone_number__icontains=search)
+            )
+        return qs
+
+
+class AdminUserStatsView(APIView):
+    """Headline counts for the admin console's user page."""
+
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        since = timezone.now() - timedelta(days=RECENT_ACTIVITY_DAYS)
+        return Response(
+            {
+                "total_users": User.objects.count(),
+                # "Active" means signed in within the window — last_login is
+                # only set on an actual login, so accounts that never signed
+                # in are correctly excluded.
+                "active_users": User.objects.filter(last_login__gte=since).count(),
+                "new_users": User.objects.filter(date_joined__gte=since).count(),
+                "window_days": RECENT_ACTIVITY_DAYS,
+            }
+        )
 
 
 class PasswordResetRequestView(APIView):

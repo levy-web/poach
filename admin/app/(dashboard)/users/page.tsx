@@ -1,17 +1,75 @@
-"use client";
-
-import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
-import Pagination from "@/components/Pagination";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { selectFilteredUsers, setCurrentPage, setSearchQuery } from "@/lib/features/users/usersSlice";
+import { getUserStats, getUsers, USERS_PAGE_SIZE } from "@/lib/dal";
+import UsersPagination from "./UsersPagination";
+import UsersSearch from "./UsersSearch";
 
-export default function UsersPage() {
-  const dispatch = useAppDispatch();
-  const users = useAppSelector(selectFilteredUsers);
-  const { searchQuery, currentPage, totalUsers, activeUsers30d, newUsers30d } = useAppSelector(
-    (state) => state.users,
+function initialsOf(user: { full_name: string; phone_number: string }) {
+  const source = user.full_name.trim();
+  if (!source) return user.phone_number.slice(-2);
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
+function formatJoined(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "—" : dateFormatter.format(parsed);
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  iconClass,
+  valueClass = "",
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  iconClass: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 rounded-xl bg-surface-container-lowest p-stack-md shadow-standard">
+      <div className={`flex h-12 w-12 items-center justify-center rounded-full ${iconClass}`}>
+        <span className="material-symbols-outlined fill">{icon}</span>
+      </div>
+      <div>
+        <p className="font-label-md text-label-md tracking-wider text-secondary uppercase">
+          {label}
+        </p>
+        <p className={`font-headline-lg text-headline-lg ${valueClass}`}>{value}</p>
+      </div>
+    </div>
   );
+}
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string }>;
+}) {
+  const { page: pageParam, q } = await searchParams;
+  const search = q?.trim() ?? "";
+  const requestedPage = Number.parseInt(pageParam ?? "1", 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
+  const [{ users, total, totalPages, failed, outOfRange }, stats] = await Promise.all([
+    getUsers({ page, search }),
+    getUserStats(),
+  ]);
+
+  const from = total === 0 ? 0 : (page - 1) * USERS_PAGE_SIZE + 1;
+  const to = Math.min(page * USERS_PAGE_SIZE, total);
+  const columns = ["User", "Phone", "Join Date", "Total Orders", "Status", "Actions"];
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-stack-lg p-margin-page">
@@ -27,59 +85,30 @@ export default function UsersPage() {
       />
 
       <div className="grid grid-cols-1 gap-gutter md:grid-cols-3">
-        <div className="flex items-center gap-4 rounded-xl bg-surface-container-lowest p-stack-md shadow-standard">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary-container">
-            <span className="material-symbols-outlined fill">groups</span>
-          </div>
-          <div>
-            <p className="font-label-md text-label-md tracking-wider text-secondary uppercase">
-              Total Users
-            </p>
-            <p className="font-headline-lg text-headline-lg">{totalUsers.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-xl bg-surface-container-lowest p-stack-md shadow-standard">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-fixed text-secondary">
-            <span className="material-symbols-outlined fill">how_to_reg</span>
-          </div>
-          <div>
-            <p className="font-label-md text-label-md tracking-wider text-secondary uppercase">
-              Active Users (30d)
-            </p>
-            <p className="font-headline-lg text-headline-lg">{activeUsers30d.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-xl bg-surface-container-lowest p-stack-md shadow-standard">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container-highest text-tertiary">
-            <span className="material-symbols-outlined fill">trending_up</span>
-          </div>
-          <div>
-            <p className="font-label-md text-label-md tracking-wider text-secondary uppercase">
-              New Users (30d)
-            </p>
-            <p className="font-headline-lg text-headline-lg text-zest-orange">
-              +{newUsers30d.toLocaleString()}
-            </p>
-          </div>
-        </div>
+        <StatCard
+          label="Total Users"
+          value={stats ? stats.total_users.toLocaleString() : "—"}
+          icon="groups"
+          iconClass="bg-primary-fixed text-primary-container"
+        />
+        <StatCard
+          label={`Active Users (${stats?.window_days ?? 30}d)`}
+          value={stats ? stats.active_users.toLocaleString() : "—"}
+          icon="how_to_reg"
+          iconClass="bg-secondary-fixed text-secondary"
+        />
+        <StatCard
+          label={`New Users (${stats?.window_days ?? 30}d)`}
+          value={stats ? `+${stats.new_users.toLocaleString()}` : "—"}
+          icon="trending_up"
+          iconClass="bg-surface-container-highest text-tertiary"
+          valueClass="text-zest-orange"
+        />
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-surface-container-highest bg-surface-container-lowest shadow-standard">
         <div className="flex flex-col items-center justify-between gap-4 border-b border-surface-container-high bg-surface-cream p-stack-md sm:flex-row">
-          <div className="relative w-full sm:w-96">
-            <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-secondary">
-              search
-            </span>
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              value={searchQuery}
-              onChange={(event) => dispatch(setSearchQuery(event.target.value))}
-              className="w-full rounded-md border border-outline-variant bg-surface-container-lowest py-2 pr-4 pl-10 font-body-sm text-body-sm shadow-sm outline-none focus:border-zest-orange focus:ring-0"
-            />
-          </div>
+          <UsersSearch initialValue={search} />
           <div className="flex w-full gap-3 sm:w-auto">
             <button className="flex flex-1 items-center justify-center gap-2 rounded-md border border-outline-warm bg-surface-cream px-4 py-2 font-label-md text-label-md text-on-surface transition-colors hover:bg-surface-container sm:flex-none">
               <span className="material-symbols-outlined text-sm">filter_list</span>
@@ -96,69 +125,115 @@ export default function UsersPage() {
           <table className="w-full min-w-[800px] border-collapse text-left">
             <thead>
               <tr className="border-b border-surface-container-high bg-surface-cream/50">
-                {["User", "Email", "Phone", "Join Date", "Total Orders", "Status", "Actions"].map((h) => (
+                {columns.map((heading) => (
                   <th
-                    key={h}
+                    key={heading}
                     className={`p-4 font-label-sm text-label-sm tracking-wider text-secondary uppercase ${
-                      h === "Actions" ? "pr-stack-md text-right" : h === "User" ? "pl-stack-md" : ""
+                      heading === "Actions"
+                        ? "pr-stack-md text-right"
+                        : heading === "User"
+                          ? "pl-stack-md"
+                          : ""
                     }`}
                   >
-                    {h}
+                    {heading}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-high font-body-sm text-body-sm">
-              {users.map((user) => (
-                <tr key={user.email} className="group transition-colors hover:bg-surface-container-low">
-                  <td className="p-4 pl-stack-md">
-                    <div className="flex items-center gap-3">
-                      {user.avatar ? (
-                        <Image
-                          src={user.avatar}
-                          alt={user.name}
-                          width={40}
-                          height={40}
-                          className="h-10 w-10 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-highest font-title-md text-tertiary">
-                          {user.initials}
-                        </div>
-                      )}
-                      <p className="font-title-md text-title-md text-on-surface">{user.name}</p>
-                    </div>
-                  </td>
-                  <td className="p-4 text-on-surface-variant">{user.email}</td>
-                  <td className="p-4 text-on-surface-variant">{user.phone}</td>
-                  <td className="p-4 text-on-surface-variant">{user.joined}</td>
-                  <td className="p-4 font-title-md text-title-md">{user.orders}</td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${user.statusClass}`}
-                    >
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="p-4 pr-stack-md text-right">
-                    <button className="text-secondary opacity-0 transition-opacity group-hover:opacity-100 hover:text-zest-orange">
-                      <span className="material-symbols-outlined">more_vert</span>
-                    </button>
+              {users.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="p-stack-xl text-center font-body-md text-body-md text-on-surface-variant"
+                  >
+                    {failed ? (
+                      "Couldn't load users — the API didn't respond."
+                    ) : outOfRange ? (
+                      <>
+                        Page {page} is past the end of the list.{" "}
+                        <a
+                          href={search ? `/users?q=${encodeURIComponent(search)}` : "/users"}
+                          className="text-zest-orange underline"
+                        >
+                          Back to the first page
+                        </a>
+                      </>
+                    ) : search ? (
+                      `No users match “${search}”.`
+                    ) : (
+                      "No users yet."
+                    )}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                users.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="group transition-colors hover:bg-surface-container-low"
+                  >
+                    <td className="p-4 pl-stack-md">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-highest font-title-md text-tertiary">
+                          {initialsOf(user)}
+                        </div>
+                        <div>
+                          <p className="font-title-md text-title-md text-on-surface">
+                            {user.full_name || "Unnamed"}
+                          </p>
+                          {user.is_staff && (
+                            <p className="font-label-sm text-label-sm text-zest-orange">Admin</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 text-on-surface-variant">
+                      <div className="flex items-center gap-1">
+                        {user.phone_number}
+                        {user.is_phone_verified && (
+                          <span
+                            title="Phone verified"
+                            className="material-symbols-outlined text-[16px] text-green-700"
+                          >
+                            verified
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-on-surface-variant">
+                      {formatJoined(user.date_joined)}
+                    </td>
+                    <td className="p-4 font-title-md text-title-md">{user.order_count}</td>
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          user.is_active
+                            ? "bg-[#e6f4ea] text-[#137333]"
+                            : "bg-surface-variant text-secondary"
+                        }`}
+                      >
+                        {user.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="p-4 pr-stack-md text-right">
+                      <button className="text-secondary opacity-0 transition-opacity group-hover:opacity-100 hover:text-zest-orange">
+                        <span className="material-symbols-outlined">more_vert</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        <Pagination
-          from={users.length ? 1 : 0}
-          to={users.length}
-          total={totalUsers}
-          noun="users"
-          currentPage={currentPage}
-          totalPages={3}
-          onPageChange={(page) => dispatch(setCurrentPage(page))}
+        <UsersPagination
+          from={from}
+          to={to}
+          total={total}
+          currentPage={page}
+          totalPages={totalPages}
         />
       </div>
     </div>

@@ -47,3 +47,19 @@ class UserSerializer(serializers.Serializer):
     full_name = serializers.CharField(read_only=True)
     is_phone_verified = serializers.BooleanField(read_only=True)
     is_staff = serializers.BooleanField(read_only=True)
+
+
+class AdminUserListSerializer(UserSerializer):
+    """
+    The admin console's user table. Read-only — this endpoint exists to list
+    accounts, not to mutate them.
+
+    `order_count` comes from an annotation on the queryset rather than a
+    property, so listing a page of users stays a single query instead of one
+    COUNT per row.
+    """
+
+    is_active = serializers.BooleanField(read_only=True)
+    date_joined = serializers.DateTimeField(read_only=True)
+    last_login = serializers.DateTimeField(read_only=True)
+    order_count = serializers.IntegerField(read_only=True)
