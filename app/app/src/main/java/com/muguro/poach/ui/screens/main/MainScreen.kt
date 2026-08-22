@@ -23,13 +23,17 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.muguro.poach.ui.navigation.NavGraph
 import com.muguro.poach.ui.navigation.Screens
-import com.muguro.poach.ui.navigation.bottomBarScreens
+import com.muguro.poach.ui.navigation.homeRouteFor
+import com.muguro.poach.ui.navigation.tabsFor
+import com.muguro.poach.api.models.UserRole
 import kotlinx.coroutines.flow.SharedFlow
 
 @Composable
 fun MainScreen(
     startDestination: String,
     sessionExpired: SharedFlow<Unit>,
+    role: UserRole,
+    roleChanged: SharedFlow<UserRole>,
     isDarkTheme: Boolean,
 ) {
     val navController = rememberNavController()
@@ -43,7 +47,19 @@ fun MainScreen(
         }
     }
 
-    Scaffold(bottomBar = { BottomBar(navController) }) { padding ->
+    // A role granted since the last launch changes the whole tab set, so the
+    // user is moved to the new role's home rather than left standing on a
+    // route their bar no longer offers a way back to.
+    LaunchedEffect(roleChanged) {
+        roleChanged.collect { newRole ->
+            navController.navigate(homeRouteFor(newRole)) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    Scaffold(bottomBar = { BottomBar(navController, role) }) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             NavGraph(
                 startDestination = startDestination,
@@ -55,10 +71,12 @@ fun MainScreen(
 }
 
 @Composable
-private fun BottomBar(navController: NavHostController) {
+private fun BottomBar(navController: NavHostController, role: UserRole) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination
-    val showBar = bottomBarScreens.any { screen ->
+    val tabs = tabsFor(role)
+    // Hidden on the auth screens, which aren't tabs.
+    val showBar = tabs.any { screen ->
         currentRoute?.hierarchy?.any { it.route == screen.route } == true
     }
 
@@ -68,7 +86,7 @@ private fun BottomBar(navController: NavHostController) {
         exit = slideOutVertically(targetOffsetY = { it }),
     ) {
         NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-            bottomBarScreens.forEach { screen ->
+            tabs.forEach { screen ->
                 val selected = currentRoute?.hierarchy?.any { it.route == screen.route } == true
                 NavigationBarItem(
                     selected = selected,

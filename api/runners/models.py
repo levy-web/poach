@@ -1,7 +1,9 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from core.models import ABXMixin
+from core.roles import RUNNER, conflict_message, conflicting_role
 
 
 class RunnerProfile(ABXMixin, models.Model):
@@ -57,6 +59,13 @@ class RunnerProfile(ABXMixin, models.Model):
 
     def __str__(self):
         return self.user.full_name or self.user.phone_number
+
+    def clean(self):
+        """Rejects a second role on the same person — see core.roles."""
+        super().clean()
+        held = conflicting_role(self.user if self.user_id else None, RUNNER)
+        if held:
+            raise ValidationError({"user": conflict_message(RUNNER, held)})
 
     @property
     def is_available_for_jobs(self):

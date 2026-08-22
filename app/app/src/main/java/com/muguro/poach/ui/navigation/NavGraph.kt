@@ -11,7 +11,10 @@ import com.muguro.poach.ui.screens.auth.composables.RegisterConfirmScreen
 import com.muguro.poach.ui.screens.auth.composables.RegisterScreen
 import com.muguro.poach.ui.screens.main.composables.AccountScreen
 import com.muguro.poach.ui.screens.main.composables.HomeScreen
+import com.muguro.poach.ui.screens.main.composables.JobsScreen
 import com.muguro.poach.ui.screens.main.composables.OrdersScreen
+import com.muguro.poach.ui.screens.main.composables.PlacedOrdersScreen
+import com.muguro.poach.ui.screens.main.composables.WalletScreen
 
 @Composable
 fun NavGraph(
@@ -30,10 +33,19 @@ fun NavGraph(
             RegisterConfirmScreen(phone = phone, navController = navController)
         }
 
+        // Every role's routes are registered up front. Which of them a user
+        // can reach is decided by the bottom bar (see tabsFor), not by the
+        // graph — swapping the graph out on a role change would mean
+        // rebuilding the NavHost underneath a live back stack.
         composable(BottomBarScreen.Home.route) { HomeScreen() }
         composable(BottomBarScreen.Orders.route) { OrdersScreen() }
         composable(BottomBarScreen.Account.route) {
             AccountScreen(navController = navController)
+        }
+        composable(BottomBarScreen.Jobs.route) { JobsScreen() }
+        composable(BottomBarScreen.PlacedOrders.route) { PlacedOrdersScreen() }
+        composable(BottomBarScreen.Wallet.route) {
+            WalletScreen(navController = navController)
         }
     }
 }

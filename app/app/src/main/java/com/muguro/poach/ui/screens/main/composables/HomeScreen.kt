@@ -56,14 +56,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.muguro.poach.api.models.MenuItem
+import com.muguro.poach.helpers.formatKsh
 import com.muguro.poach.ui.screens.main.viewmodels.DishFilter
 import com.muguro.poach.ui.screens.main.viewmodels.HomeViewModel
 import com.muguro.poach.ui.theme.PriceLabel
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
-import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
-import java.util.Locale
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
@@ -317,7 +314,7 @@ private fun DishCard(dish: MenuItem, onAdd: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = formatPrice(dish.price),
+                        text = formatKsh(dish.price),
                         style = PriceLabel,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 4.dp),
@@ -435,14 +432,4 @@ private fun EmptyState(query: String) {
 private fun resultSummary(count: Int, query: String): String {
     val noun = if (count == 1) "dish" else "dishes"
     return if (query.isBlank()) "$count $noun near you" else "$count $noun for “$query”"
-}
-
-// Prices arrive as decimal strings ("350.00"); the design shows whole
-// shillings where there are no cents, so trailing zeros are dropped.
-private fun formatPrice(raw: String): String {
-    val amount = raw.toBigDecimalOrNull() ?: return raw
-    val trimmed = amount.stripTrailingZeros()
-    val pattern = if (trimmed.scale() <= 0) "#,##0" else "#,##0.00"
-    val format = DecimalFormat(pattern, DecimalFormatSymbols(Locale.US))
-    return "KSh ${format.format(trimmed.max(BigDecimal.ZERO))}"
 }

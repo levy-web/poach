@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from core.roles import VENDOR, conflict_message, conflicting_role
 from users.models import User
 from users.phone import normalize_phone_number
 
@@ -80,7 +81,22 @@ class VendorProfileSerializer(UserByPhoneMixin, serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = self.resolve_user(super().validate(attrs))
+        attrs = self.validate_single_role(attrs)
         return self.validate_pickup_building_zone(attrs)
+
+    def validate_single_role(self, attrs):
+        """
+        A person holds at most one role. ModelSerializer doesn't call the
+        model's clean(), so the rule is enforced here too — otherwise the
+        API would happily create the dual-role user the admin site rejects.
+        """
+        user = attrs.get("user", self.instance.user if self.instance else None)
+        held = conflicting_role(user, VENDOR)
+        if held:
+            raise serializers.ValidationError(
+                {"user_phone_number": conflict_message(VENDOR, held)}
+            )
+        return attrs
 
     def validate_pickup_building_zone(self, attrs):
         """

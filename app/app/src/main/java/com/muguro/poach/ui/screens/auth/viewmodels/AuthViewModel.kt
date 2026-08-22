@@ -8,6 +8,7 @@ import com.muguro.poach.api.models.AuthResponse
 import com.muguro.poach.api.models.LoginRequest
 import com.muguro.poach.api.models.RegisterConfirmRequest
 import com.muguro.poach.api.models.RegisterRequest
+import com.muguro.poach.api.models.UserRole
 import com.muguro.poach.helpers.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -25,12 +26,12 @@ class AuthViewModel @Inject constructor(
     var isLoading = mutableStateOf(false)
     var error = mutableStateOf<String?>(null)
 
-    fun login(onSuccess: () -> Unit) {
+    fun login(onSuccess: (UserRole) -> Unit) {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
             poachApi.login(LoginRequest(loginPhone.value.trim(), loginPassword.value))
-                .onSuccess { saveAuthSession(it); onSuccess() }
+                .onSuccess { onSuccess(saveAuthSession(it)) }
                 .onFailure { error.value = it.message }
             isLoading.value = false
         }
@@ -67,12 +68,12 @@ class AuthViewModel @Inject constructor(
     var resendLoading = mutableStateOf(false)
     var resendMessage = mutableStateOf<String?>(null)
 
-    fun confirmRegister(phone: String, onSuccess: () -> Unit) {
+    fun confirmRegister(phone: String, onSuccess: (UserRole) -> Unit) {
         viewModelScope.launch {
             confirmLoading.value = true
             confirmError.value = null
             poachApi.registerConfirm(RegisterConfirmRequest(phone, confirmationCode.value.trim()))
-                .onSuccess { saveAuthSession(it); onSuccess() }
+                .onSuccess { onSuccess(saveAuthSession(it)) }
                 .onFailure { confirmError.value = it.message }
             confirmLoading.value = false
         }
@@ -90,12 +91,17 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    private fun saveAuthSession(auth: AuthResponse) {
+    // Returns the role so the caller can route to that role's home; the
+    // login response already carries it, so there's no second round trip.
+    private fun saveAuthSession(auth: AuthResponse): UserRole {
+        val role = UserRole.fromApi(auth.user.role)
         sessionManager.saveSession(
             access = auth.access,
             refresh = auth.refresh,
             phoneNumber = auth.user.phone_number,
             fullName = auth.user.full_name,
+            role = role,
         )
+        return role
     }
 }

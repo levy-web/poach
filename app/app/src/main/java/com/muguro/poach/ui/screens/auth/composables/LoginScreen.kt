@@ -46,7 +46,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.muguro.poach.ui.navigation.BottomBarScreen
+import com.muguro.poach.ui.navigation.homeRouteFor
 import com.muguro.poach.ui.navigation.Screens
 import com.muguro.poach.ui.screens.auth.viewmodels.AuthViewModel
 
@@ -142,8 +142,8 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        viewModel.login {
-                            navController.navigate(BottomBarScreen.Home.route) {
+                        viewModel.login { role ->
+                            navController.navigate(homeRouteFor(role)) {
                                 popUpTo(Screens.LoginScreen.route) { inclusive = true }
                             }
                         }

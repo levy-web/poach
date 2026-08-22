@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.muguro.poach.ui.screens.main.MainScreen
@@ -27,9 +28,12 @@ class MainActivity : ComponentActivity() {
             PoachTheme(darkTheme = isDarkTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val startDestination by mainViewModel.startDestination
+                    val role by mainViewModel.role.collectAsState()
                     MainScreen(
                         startDestination = startDestination,
                         sessionExpired = mainViewModel.sessionExpired,
+                        role = role,
+                        roleChanged = mainViewModel.roleChanged,
                         isDarkTheme = isDarkTheme,
                     )
                 }

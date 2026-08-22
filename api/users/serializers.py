@@ -1,6 +1,8 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from core.roles import RUNNER, VENDOR, role_for
+
 from .models import User
 from .phone import PHONE_REGEX, normalize_phone_number
 
@@ -51,6 +53,42 @@ class UserSerializer(serializers.Serializer):
     # Exposed so the admin console can hide the "admin access" toggle from
     # staff who aren't allowed to change it (see AdminUserViewSet).
     is_superuser = serializers.BooleanField(read_only=True)
+    # "customer" | "vendor" | "runner". The mobile app picks its entire tab
+    # set from this, so it rides along on login/register-confirm as well as
+    # /me/ — all three go through this serializer.
+    role = serializers.SerializerMethodField()
+    # The role's own record: wallet balance, approval state, and the bits
+    # each role's home screen needs. Null for customers, who have no profile.
+    role_profile = serializers.SerializerMethodField()
+
+    def get_role(self, obj):
+        return role_for(obj)
+
+    def get_role_profile(self, obj):
+        role = role_for(obj)
+        if role == VENDOR:
+            p = obj.vendor_profile
+            return {
+                "id": p.id,
+                "business_name": p.business_name,
+                "zone_name": p.zone.name,
+                "is_approved": p.is_approved,
+                # Decimals as strings, matching every other money field in
+                # this API, so no precision is lost in a JSON float.
+                "wallet_balance": str(p.wallet_balance),
+            }
+        if role == RUNNER:
+            p = obj.runner_profile
+            return {
+                "id": p.id,
+                "zone_name": p.zone.name,
+                "is_approved": p.is_approved,
+                "is_online": p.is_online,
+                "wallet_balance": str(p.wallet_balance),
+                "rating_avg": str(p.rating_avg) if p.rating_avg is not None else None,
+                "rating_count": p.rating_count,
+            }
+        return None
 
 
 class AdminUserWriteSerializer(serializers.Serializer):

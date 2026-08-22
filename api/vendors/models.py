@@ -4,6 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from core.models import ABXMixin
+from core.roles import VENDOR, conflict_message, conflicting_role
 
 
 class VendorProfile(ABXMixin, models.Model):
@@ -77,8 +78,15 @@ class VendorProfile(ABXMixin, models.Model):
         A pickup building in a different zone would send runners to the wrong
         neighborhood, so the two have to agree. Enforced here as well as in
         the serializer, since the FK alone can't express the constraint.
+
+        Also rejects a second role on the same person — see core.roles.
         """
         super().clean()
+
+        held = conflicting_role(self.user if self.user_id else None, VENDOR)
+        if held:
+            raise ValidationError({"user": conflict_message(VENDOR, held)})
+
         if (
             self.pickup_building_id
             and self.zone_id

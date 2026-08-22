@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from core.roles import RUNNER, conflict_message, conflicting_role
 from vendors.serializers import UserByPhoneMixin
 
 from .models import RunnerProfile
@@ -50,7 +51,18 @@ class RunnerProfileSerializer(UserByPhoneMixin, serializers.ModelSerializer):
         extra_kwargs = {"user": {"required": False}}
 
     def validate(self, attrs):
-        return self.resolve_user(super().validate(attrs))
+        attrs = self.resolve_user(super().validate(attrs))
+        return self.validate_single_role(attrs)
+
+    def validate_single_role(self, attrs):
+        """The mirror of VendorProfileSerializer's rule — see core.roles."""
+        user = attrs.get("user", self.instance.user if self.instance else None)
+        held = conflicting_role(user, RUNNER)
+        if held:
+            raise serializers.ValidationError(
+                {"user_phone_number": conflict_message(RUNNER, held)}
+            )
+        return attrs
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
