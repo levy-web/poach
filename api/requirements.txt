@@ -16,3 +16,6 @@ psycopg2-binary>=2.9,<3.0
 
 # Optional but recommended once the Kotlin app talks to this API
 django-cors-headers>=4.3,<5.0
+
+# Image handling for MenuItem.image (Django's ImageField requires it)
+Pillow>=10.0,<12.0

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { ConfirmDialog } from "@/components/FormDialog";
 import type { Vendor, Zone } from "@/lib/dal";
@@ -36,6 +37,14 @@ export default function VendorsTableActions({
             error
           </span>
         )}
+
+        <Link
+          href={`/vendors/${vendor.id}`}
+          title="View menu"
+          className="rounded-md p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-zest-orange"
+        >
+          <span className="material-symbols-outlined text-[20px]">restaurant_menu</span>
+        </Link>
 
         <button
           onClick={() => setEditing(true)}

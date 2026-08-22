@@ -99,6 +99,16 @@ class MenuItem(ABXMixin, models.Model):
     )
     dish_name = models.CharField(max_length=100)
     description = models.CharField(max_length=255, blank=True)
+    # Optional: a dish without a photo still sells, and requiring one would
+    # block vendors from listing until someone takes pictures. Stored under
+    # MEDIA_ROOT, which is local disk today — see the note in settings.py
+    # before deploying to more than one instance.
+    image = models.ImageField(
+        upload_to="menu-items/",
+        blank=True,
+        null=True,
+        help_text="Dish photo shown in the customer app's listing cards.",
+    )
     price = models.DecimalField(
         max_digits=8,
         decimal_places=2,

@@ -3,6 +3,7 @@ package com.muguro.poach.api
 import android.content.Context
 import com.muguro.poach.api.models.AuthResponse
 import com.muguro.poach.api.models.LoginRequest
+import com.muguro.poach.api.models.MenuItem
 import com.muguro.poach.api.models.LogoutRequest
 import com.muguro.poach.api.models.RefreshRequest
 import com.muguro.poach.api.models.RefreshResponse
@@ -19,6 +20,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Authenticator
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -44,8 +46,9 @@ class PoachAPI(context: Context, private val sessionManager: SessionManager) {
     companion object {
         // Android emulator's alias for the host machine's localhost. Swap to
         // your machine's LAN IP (and add it to the backend's ALLOWED_HOSTS)
-        // to test against a physical device, e.g. "http://192.168.1.23:8000/api/auth/".
-        private const val BASE_URL = "http://10.0.2.2:8000/api/auth/"
+        // to test against a physical device, e.g. "http://192.168.1.23:8000/api/".
+        private const val BASE_URL = "http://10.0.2.2:8000/api/"
+        private const val AUTH_URL = BASE_URL + "auth/"
     }
 
     var onUnauthorized: (() -> Unit)? = null
@@ -118,7 +121,7 @@ class PoachAPI(context: Context, private val sessionManager: SessionManager) {
         val refreshToken = sessionManager.getRefreshToken() ?: return null
         val body = json.encodeToString(RefreshRequest.serializer(), RefreshRequest(refreshToken))
             .toRequestBody(jsonMediaType)
-        val request = Request.Builder().url(BASE_URL + "token/refresh/").post(body).build()
+        val request = Request.Builder().url(AUTH_URL + "token/refresh/").post(body).build()
 
         return try {
             refreshHttpClient.newCall(request).execute().use { response ->
@@ -195,7 +198,7 @@ class PoachAPI(context: Context, private val sessionManager: SessionManager) {
 
     private fun <T> post(path: String, serializer: kotlinx.serialization.SerializationStrategy<T>, body: T): Request {
         val requestBody = json.encodeToString(serializer, body).toRequestBody(jsonMediaType)
-        return Request.Builder().url(BASE_URL + path).post(requestBody).build()
+        return Request.Builder().url(AUTH_URL + path).post(requestBody).build()
     }
 
     suspend fun register(request: RegisterRequest): Result<Unit> =
@@ -217,5 +220,17 @@ class PoachAPI(context: Context, private val sessionManager: SessionManager) {
     }
 
     suspend fun getMe(): Result<User> =
-        makeApiRequest(Request.Builder().url(BASE_URL + "me/").get().build())
+        makeApiRequest(Request.Builder().url(AUTH_URL + "me/").get().build())
+
+    /**
+     * Dishes for the customer home listing. The endpoint reads without auth
+     * and returns a plain array unless `page` is asked for, so no envelope
+     * to unwrap here.
+     */
+    suspend fun getMenuItems(search: String? = null): Result<List<MenuItem>> {
+        val url = (BASE_URL + "vendors/menu-items/").toHttpUrl().newBuilder()
+            .apply { if (!search.isNullOrBlank()) addQueryParameter("search", search.trim()) }
+            .build()
+        return makeApiRequest(Request.Builder().url(url).get().build())
+    }
 }

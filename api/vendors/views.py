@@ -77,12 +77,24 @@ class VendorProfileViewSet(
         serializer.save(updated_by=self.request.user)
 
 
-class MenuItemViewSet(viewsets.ModelViewSet):
-    """Same admin-driven write policy as VendorProfile; reads hide items
-    that are unavailable or belong to an unapproved vendor."""
+class MenuItemViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Same admin-driven write policy as VendorProfile; reads hide items
+    that are unavailable or belong to an unapproved vendor.
+
+    No destroy action: a dish is taken off the menu with is_available=False,
+    which keeps it (and any historical order line referring to it) intact.
+    """
 
     serializer_class = MenuItemSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = OptInPageNumberPagination
 
     def get_queryset(self):
         if self.request.user and self.request.user.is_staff:
@@ -90,10 +102,24 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         else:
             qs = MenuItem.objects.filter(is_available=True, vendor__is_approved=True)
 
+        # pickup_building/zone are serialized onto every menu item for the
+        # customer app's listing cards — joined here so a long list doesn't
+        # fire two extra queries per row.
+        qs = qs.select_related("vendor", "vendor__pickup_building", "vendor__zone")
+
         vendor_id = self.request.query_params.get("vendor")
         if vendor_id:
             qs = qs.filter(vendor_id=vendor_id)
-        return qs
+
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(dish_name__icontains=search) | Q(description__icontains=search)
+            )
+
+        # dish_name is unique per vendor but not globally; the id keeps paging
+        # stable across vendors.
+        return qs.order_by("dish_name", "id")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, updated_by=self.request.user)

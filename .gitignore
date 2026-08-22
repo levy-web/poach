@@ -3,3 +3,6 @@ __pycache__/
 venv/
 db.sqlite3
 .env
+
+# Uploaded files (MenuItem.image) — user content, not source
+api/media/

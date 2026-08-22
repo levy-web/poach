@@ -265,3 +265,29 @@ export function getBuildings(opts: { page?: number; search?: string; zone?: stri
     extra: { zone: opts.zone ?? "" },
   });
 }
+
+export interface MenuItem {
+  id: number;
+  vendor: number;
+  vendor_name: string;
+  dish_name: string;
+  description: string;
+  price: string;
+  /** Absolute URL of the uploaded photo, or null when none is set. */
+  image: string | null;
+  is_available: boolean;
+}
+
+export function getMenuItems(opts: { vendor: number; page?: number; search?: string }) {
+  return fetchListPage<MenuItem>("/api/vendors/menu-items/", {
+    page: opts.page ?? 1,
+    search: opts.search ?? "",
+    extra: { vendor: String(opts.vendor) },
+  });
+}
+
+/** A single vendor, for the menu page header. Null when not found. */
+export async function getVendor(id: number): Promise<Vendor | null> {
+  const { data } = await authorizedFetch(`/api/vendors/profiles/${id}/`);
+  return (data as Vendor) ?? null;
+}

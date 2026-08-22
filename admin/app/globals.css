@@ -65,6 +65,7 @@
   --font-title-md: var(--font-plus-jakarta-sans);
   --font-label-md: var(--font-plus-jakarta-sans);
   --font-label-sm: var(--font-plus-jakarta-sans);
+  --font-price: var(--font-jetbrains-mono);
   --font-body-lg: var(--font-be-vietnam-pro);
   --font-body-md: var(--font-be-vietnam-pro);
   --font-body-sm: var(--font-be-vietnam-pro);

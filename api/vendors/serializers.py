@@ -110,6 +110,17 @@ class VendorProfileSerializer(UserByPhoneMixin, serializers.ModelSerializer):
 
 class MenuItemSerializer(serializers.ModelSerializer):
     vendor_name = serializers.CharField(source="vendor.business_name", read_only=True)
+    # The customer app's listing card shows where a dish is collected from,
+    # so it needs the vendor's location alongside the dish itself — without
+    # a second round trip to the vendor profile endpoint for every card.
+    # Building is the specific pickup point; zone is the fallback for
+    # vendors that haven't been assigned one yet.
+    vendor_building_name = serializers.CharField(
+        source="vendor.pickup_building.name", read_only=True, default=None
+    )
+    vendor_zone_name = serializers.CharField(
+        source="vendor.zone.name", read_only=True
+    )
 
     class Meta:
         model = MenuItem
@@ -117,9 +128,12 @@ class MenuItemSerializer(serializers.ModelSerializer):
             "id",
             "vendor",
             "vendor_name",
+            "vendor_building_name",
+            "vendor_zone_name",
             "dish_name",
             "description",
             "price",
+            "image",
             "is_available",
             "created_at",
             "updated_at",

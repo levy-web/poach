@@ -170,6 +170,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Uploaded files (currently just MenuItem.image). Served by Django itself in
+# DEBUG only — a real deployment needs object storage or a web server in
+# front, since local disk doesn't survive a redeploy or work across instances.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
